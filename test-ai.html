@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Test Page</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        button { padding: 10px 20px; margin: 10px 0; cursor: pointer; }
+        .result { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .error { background-color: #ffebee; border-color: #f44336; }
+        .success { background-color: #e8f5e8; border-color: #4caf50; }
+        textarea { width: 100%; height: 100px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Service Test</h1>
+        
+        <h3>Environment Check</h3>
+        <button onclick="checkEnvironment()">Check Environment</button>
+        <div id="envResult" class="result"></div>
+        
+        <h3>Connection Test</h3>
+        <button onclick="testConnection()">Test Connection</button>
+        <div id="connectionResult" class="result"></div>
+        
+        <h3>AI Improvement Test</h3>
+        <textarea id="testText" placeholder="Enter text to improve...">This is a sample text that needs to be improved and made more concise for note taking purposes.</textarea>
+        <button onclick="testAI()">Test AI Improvement</button>
+        <div id="aiResult" class="result"></div>
+        
+        <h3>Debug Console</h3>
+        <div id="debugConsole" style="background: #f5f5f5; padding: 10px; font-family: monospace; white-space: pre-wrap; height: 200px; overflow-y: scroll;"></div>
+    </div>
+
+    <script>
+        // Simple logging to debug console
+        function log(message) {
+            const console = document.getElementById('debugConsole');
+            console.textContent += new Date().toISOString() + ': ' + message + '\n';
+            console.scrollTop = console.scrollHeight;
+        }
+
+        function checkEnvironment() {
+            log('Checking environment...');
+            const result = document.getElementById('envResult');
+            
+            const checks = {
+                'Current URL': window.location.href,
+                'Hostname': window.location.hostname,
+                'Protocol': window.location.protocol,
+                'Netlify Functions Available': window.location.href.includes('netlify') ? 'Likely' : 'Unknown',
+                'Fetch API': typeof fetch !== 'undefined' ? 'Available' : 'Not Available'
+            };
+            
+            let html = '<h4>Environment Information:</h4><ul>';
+            for (const [key, value] of Object.entries(checks)) {
+                html += `<li><strong>${key}:</strong> ${value}</li>`;
+            }
+            html += '</ul>';
+            
+            result.innerHTML = html;
+            result.className = 'result success';
+            log('Environment check completed');
+        }
+
+        async function testConnection() {
+            log('Testing connection to Netlify function...');
+            const result = document.getElementById('connectionResult');
+            
+            try {
+                const response = await fetch('/.netlify/functions/improve-text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: 'test' })
+                });
+                
+                log(`Response status: ${response.status}`);
+                log(`Response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`Response data: ${JSON.stringify(data)}`);
+                    result.innerHTML = `<h4>✅ Connection Successful!</h4><p>Status: ${response.status}</p>`;
+                    result.className = 'result success';
+                } else {
+                    const errorText = await response.text();
+                    log(`Error response: ${errorText}`);
+                    result.innerHTML = `<h4>❌ Connection Failed</h4><p>Status: ${response.status}</p><p>Error: ${errorText}</p>`;
+                    result.className = 'result error';
+                }
+            } catch (error) {
+                log(`Connection error: ${error.message}`);
+                result.innerHTML = `<h4>❌ Connection Error</h4><p>${error.message}</p>`;
+                result.className = 'result error';
+            }
+        }
+
+        async function testAI() {
+            log('Testing AI improvement...');
+            const result = document.getElementById('aiResult');
+            const text = document.getElementById('testText').value;
+            
+            if (!text.trim()) {
+                result.innerHTML = '<h4>❌ Please enter some text to test</h4>';
+                result.className = 'result error';
+                return;
+            }
+            
+            try {
+                const prompt = `Please improve the following text to make it more concise, organized, and better for note-taking. Keep the same meaning but make it clearer and more structured:
+
+${text}
+
+Improved version:`;
+
+                log('Sending AI request...');
+                const response = await fetch('/.netlify/functions/improve-text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: prompt,
+                        max_length: 512,
+                        temperature: 0.3
+                    })
+                });
+                
+                log(`AI response status: ${response.status}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`AI response data: ${JSON.stringify(data)}`);
+                    
+                    if (data.generated_text) {
+                        result.innerHTML = `
+                            <h4>✅ AI Test Successful!</h4>
+                            <p><strong>Original:</strong> ${text}</p>
+                            <p><strong>AI Response:</strong> ${data.generated_text}</p>
+                        `;
+                        result.className = 'result success';
+                    } else {
+                        result.innerHTML = '<h4>❌ AI returned empty response</h4>';
+                        result.className = 'result error';
+                    }
+                } else {
+                    const errorText = await response.text();
+                    log(`AI error response: ${errorText}`);
+                    result.innerHTML = `<h4>❌ AI Request Failed</h4><p>Status: ${response.status}</p><p>Error: ${errorText}</p>`;
+                    result.className = 'result error';
+                }
+            } catch (error) {
+                log(`AI test error: ${error.message}`);
+                result.innerHTML = `<h4>❌ AI Test Error</h4><p>${error.message}</p>`;
+                result.className = 'result error';
+            }
+        }
+
+        // Initialize
+        log('AI Test Page loaded');
+    </script>
+</body>
+</html> 

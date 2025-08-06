@@ -14,6 +14,7 @@ class NotesApp {
         this.newNoteBtn = document.getElementById('newNoteBtn');
         this.deleteNoteBtn = document.getElementById('deleteNoteBtn');
         this.saveNoteBtn = document.getElementById('saveNoteBtn');
+        this.testAIBtn = document.getElementById('testAIBtn');
         this.noteTitle = document.getElementById('noteTitle');
         this.noteContent = document.getElementById('noteContent');
         this.notesList = document.getElementById('notesList');
@@ -26,6 +27,7 @@ class NotesApp {
         this.newNoteBtn.addEventListener('click', () => this.createNewNote());
         this.deleteNoteBtn.addEventListener('click', () => this.deleteCurrentNote());
         this.saveNoteBtn.addEventListener('click', () => this.saveCurrentNote());
+        this.testAIBtn.addEventListener('click', () => this.testAI());
         
         // Auto-save on typing (with debounce)
         let saveTimeout;
@@ -43,6 +45,11 @@ class NotesApp {
         
         // AI improvement on double Enter
         this.noteContent.addEventListener('keydown', (e) => this.handleKeyDown(e));
+        
+        // Show test button if in development mode
+        if (window.location.hostname === 'localhost' || window.location.hostname.includes('netlify')) {
+            this.testAIBtn.style.display = 'inline-flex';
+        }
     }
 
     async loadNotes() {
@@ -308,7 +315,11 @@ class NotesApp {
         try {
             this.showSaveStatus('🤖 AI is improving your text...', 'loading');
             
+            console.log('Attempting to improve text:', textToImprove.substring(0, 100) + '...');
+            
             const improvedText = await this.aiService.improveText(textToImprove);
+            
+            console.log('AI response received:', improvedText ? 'Success' : 'Empty response');
             
             if (improvedText && improvedText.trim()) {
                 // Replace the text before cursor with improved version
@@ -333,11 +344,57 @@ class NotesApp {
                 setTimeout(() => this.showSaveStatus(''), 3000);
             } else {
                 this.showSaveStatus('AI couldn\'t improve this text', 'error');
+                console.log('Empty or invalid AI response');
             }
             
         } catch (error) {
             console.error('AI improvement failed:', error);
-            this.showSaveStatus('AI improvement failed. Try again later.', 'error');
+            
+            // More specific error messages
+            if (error.message.includes('Failed to fetch')) {
+                this.showSaveStatus('Connection failed. Check internet connection.', 'error');
+            } else if (error.message.includes('503')) {
+                this.showSaveStatus('AI model loading. Try again in 30 seconds.', 'error');
+            } else if (error.message.includes('401') || error.message.includes('403')) {
+                this.showSaveStatus('AI service not configured. Check token.', 'error');
+            } else {
+                this.showSaveStatus(`AI error: ${error.message}`, 'error');
+            }
+        }
+    }
+
+    async testAI() {
+        try {
+            this.showSaveStatus('🧪 Testing AI connection...', 'loading');
+            
+            // First test the connection
+            const connectionTest = await this.aiService.testConnection();
+            console.log('Connection test result:', connectionTest);
+            
+            if (!connectionTest.success) {
+                this.showSaveStatus(`Connection failed: ${connectionTest.error}`, 'error');
+                return;
+            }
+            
+            // Test with sample text
+            const sampleText = "This is a test message to check if the AI improvement feature is working correctly.";
+            console.log('Testing with sample text:', sampleText);
+            
+            const result = await this.aiService.improveText(sampleText);
+            
+            if (result) {
+                this.showSaveStatus('✅ AI test successful!', 'success');
+                console.log('AI test result:', result);
+                
+                // Show result in an alert for debugging
+                alert(`AI Test Successful!\n\nOriginal: ${sampleText}\n\nImproved: ${result}`);
+            } else {
+                this.showSaveStatus('❌ AI test failed - empty response', 'error');
+            }
+            
+        } catch (error) {
+            console.error('AI test failed:', error);
+            this.showSaveStatus(`❌ AI test failed: ${error.message}`, 'error');
         }
     }
 }
