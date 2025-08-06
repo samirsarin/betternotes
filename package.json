@@ -1,0 +1,19 @@
+{
+  "name": "betternotes",
+  "version": "1.0.0",
+  "description": "A simple note-taking web app using Firebase and Netlify",
+  "main": "index.html",
+  "scripts": {
+    "dev": "firebase serve",
+    "build": "echo 'No build step needed for static site'",
+    "deploy": "firebase deploy"
+  },
+  "dependencies": {
+    "firebase": "^10.7.1"
+  },
+  "devDependencies": {
+    "firebase-tools": "^13.0.0"
+  },
+  "author": "",
+  "license": "MIT"
+} 

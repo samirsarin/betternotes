@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetterNotes - Simple Note Taking</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>📝 BetterNotes</h1>
+            <button id="newNoteBtn" class="btn btn-primary">+ New Note</button>
+        </header>
+
+        <div class="main-content">
+            <!-- Notes List Sidebar -->
+            <aside class="notes-sidebar">
+                <h3>Your Notes</h3>
+                <div id="notesList" class="notes-list">
+                    <div class="empty-state">
+                        <p>No notes yet. Create your first note!</p>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Note Editor -->
+            <main class="note-editor">
+                <div id="editorArea" class="editor-area">
+                    <div class="editor-header">
+                        <input type="text" id="noteTitle" placeholder="Untitled Note" class="note-title-input">
+                        <button id="deleteNoteBtn" class="btn btn-danger" style="display: none;">🗑️ Delete</button>
+                    </div>
+                    <textarea id="noteContent" placeholder="Start typing your note..." class="note-content"></textarea>
+                    <div class="editor-footer">
+                        <button id="saveNoteBtn" class="btn btn-success">💾 Save Note</button>
+                        <span id="saveStatus" class="save-status"></span>
+                    </div>
+                </div>
+                <div id="welcomeMessage" class="welcome-message">
+                    <h2>Welcome to BetterNotes!</h2>
+                    <p>Click "New Note" to create your first note, or select an existing note from the sidebar.</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <!-- Your app's JavaScript -->
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html> 
