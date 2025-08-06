@@ -372,7 +372,7 @@ class NotesApp {
             console.log('Connection test result:', connectionTest);
             
             if (!connectionTest.success) {
-                this.showSaveStatus(`Connection failed: ${connectionTest.error}`, 'error');
+                this.showSaveStatus(`Connection failed: ${connectionTest.error || 'Unknown error'}`, 'error');
                 return;
             }
             

@@ -51,11 +51,13 @@ Improved version:`;
                 
                 // Handle specific error cases
                 if (response.status === 404) {
-                    throw new Error('Netlify function not found. Make sure the function is deployed.');
+                    throw new Error('Netlify function not found. Function may not be deployed or path incorrect.');
                 } else if (response.status === 500) {
-                    throw new Error('Server error. Check Hugging Face token configuration.');
+                    throw new Error('Server error. Check Hugging Face token in Netlify environment variables.');
                 } else if (response.status === 503) {
-                    throw new Error('AI model is loading. Please wait and try again.');
+                    throw new Error('AI model is loading. Please wait 30 seconds and try again.');
+                } else if (response.status === 400) {
+                    throw new Error('Bad request. Check if text is valid.');
                 } else {
                     throw new Error(`API request failed: ${response.status} - ${errorText}`);
                 }
@@ -125,13 +127,27 @@ Improved version:`;
     // Test function to check if the service is working
     async testConnection() {
         try {
+            console.log('Testing connection to:', this.apiEndpoint);
             const response = await fetch(this.apiEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: 'test' })
             });
-            return { success: response.ok, status: response.status };
+            
+            console.log('Test response status:', response.status);
+            console.log('Test response headers:', Object.fromEntries(response.headers.entries()));
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Test response data:', data);
+                return { success: true, status: response.status, data: data };
+            } else {
+                const errorText = await response.text();
+                console.log('Test error response:', errorText);
+                return { success: false, status: response.status, error: errorText };
+            }
         } catch (error) {
+            console.log('Test connection error:', error);
             return { success: false, error: error.message };
         }
     }

@@ -2,10 +2,27 @@
 // This keeps your Hugging Face token secure on the server side
 
 exports.handler = async (event, context) => {
+    // Handle CORS preflight requests
+    if (event.httpMethod === 'OPTIONS') {
+        return {
+            statusCode: 200,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS'
+            },
+            body: ''
+        };
+    }
+
     // Only allow POST requests
     if (event.httpMethod !== 'POST') {
         return {
             statusCode: 405,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({ error: 'Method not allowed' })
         };
     }
@@ -13,10 +30,30 @@ exports.handler = async (event, context) => {
     try {
         const { text, max_length = 512, temperature = 0.3 } = JSON.parse(event.body);
 
-        if (!text) {
+        if (!text || text.trim() === '') {
             return {
                 statusCode: 400,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
                 body: JSON.stringify({ error: 'Text is required' })
+            };
+        }
+
+        // Handle test requests
+        if (text === 'test') {
+            return {
+                statusCode: 200,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                body: JSON.stringify({ 
+                    success: true, 
+                    message: 'Function is working',
+                    generated_text: 'Test successful'
+                })
             };
         }
 
