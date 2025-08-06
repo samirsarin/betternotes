@@ -4,11 +4,17 @@ class AIService {
         // We'll use Netlify Functions to keep the API key secure
         this.apiEndpoint = '/.netlify/functions/improve-text';
         this.isProcessing = false;
+        this.useLocalOnly = true; // Use local AI by default since HF models are unreliable
     }
 
     async improveText(text) {
         if (this.isProcessing || !text.trim()) {
             return null;
+        }
+
+        // If local-only mode is enabled, throw error to trigger fallback
+        if (this.useLocalOnly) {
+            throw new Error('Using local AI for better reliability and zero cost');
         }
 
         this.isProcessing = true;

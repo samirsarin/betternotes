@@ -1,8 +1,6 @@
-// Netlify Function to improve text using Hugging Face Flan-T5-Large
-// This keeps your Hugging Face token secure on the server side
-
+// Simple fallback Netlify Function using a basic model
 exports.handler = async (event, context) => {
-    // Handle CORS preflight requests
+    // Handle CORS
     if (event.httpMethod === 'OPTIONS') {
         return {
             statusCode: 200,
@@ -15,33 +13,26 @@ exports.handler = async (event, context) => {
         };
     }
 
-    // Only allow POST requests
     if (event.httpMethod !== 'POST') {
         return {
             statusCode: 405,
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Access-Control-Allow-Origin': '*' },
             body: JSON.stringify({ error: 'Method not allowed' })
         };
     }
 
     try {
-        const { text, max_length = 512, temperature = 0.3 } = JSON.parse(event.body);
+        const { text } = JSON.parse(event.body);
 
         if (!text || text.trim() === '') {
             return {
                 statusCode: 400,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
+                headers: { 'Access-Control-Allow-Origin': '*' },
                 body: JSON.stringify({ error: 'Text is required' })
             };
         }
 
-        // Handle test requests
+        // Simple test response
         if (text === 'test') {
             return {
                 statusCode: 200,
@@ -50,28 +41,25 @@ exports.handler = async (event, context) => {
                     'Access-Control-Allow-Origin': '*'
                 },
                 body: JSON.stringify({ 
-                    success: true, 
-                    message: 'Function is working',
-                    generated_text: 'Test successful'
+                    success: true,
+                    generated_text: 'Simple test successful - function working'
                 })
             };
         }
 
-        // Get Hugging Face token from environment variables
         const HF_TOKEN = process.env.HUGGING_FACE_TOKEN;
         
         if (!HF_TOKEN) {
-            console.error('Hugging Face token not found in environment variables');
             return {
                 statusCode: 500,
-                body: JSON.stringify({ error: 'AI service configuration error' })
+                headers: { 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ error: 'HF token not configured' })
             };
         }
 
-        // Call Hugging Face Inference API  
-        // Using t5-base - guaranteed available, cheap, and excellent for text improvement
+        // Use distilbart-cnn - very reliable model
         const response = await fetch(
-            'https://api-inference.huggingface.co/models/t5-base',
+            'https://api-inference.huggingface.co/models/sshleifer/distilbart-cnn-12-6',
             {
                 method: 'POST',
                 headers: {
@@ -79,48 +67,31 @@ exports.handler = async (event, context) => {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    inputs: `paraphrase: ${text}`,
-                    parameters: {
-                        max_length: 100,
-                        temperature: 0.7,
-                        do_sample: true,
-                        top_p: 0.9
-                    },
-                    options: {
-                        wait_for_model: true
-                    }
+                    inputs: text,
+                    options: { wait_for_model: true }
                 })
             }
         );
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('Hugging Face API error:', response.status, errorText);
-            
-            // Handle rate limiting
-            if (response.status === 503) {
-                return {
-                    statusCode: 503,
-                    body: JSON.stringify({ 
-                        error: 'AI model is loading, please try again in a moment' 
-                    })
-                };
-            }
-            
             return {
                 statusCode: response.status,
+                headers: { 'Access-Control-Allow-Origin': '*' },
                 body: JSON.stringify({ 
-                    error: `AI service error: ${response.status}` 
+                    error: `HF API error: ${response.status}`,
+                    details: errorText
                 })
             };
         }
 
         const result = await response.json();
         
-        // Handle different response formats
         let generatedText = '';
         if (Array.isArray(result) && result.length > 0) {
-            generatedText = result[0].generated_text || '';
+            generatedText = result[0].summary_text || result[0].generated_text || '';
+        } else if (result.summary_text) {
+            generatedText = result.summary_text;
         } else if (result.generated_text) {
             generatedText = result.generated_text;
         }
@@ -129,9 +100,7 @@ exports.handler = async (event, context) => {
             statusCode: 200,
             headers: {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Methods': 'POST'
+                'Access-Control-Allow-Origin': '*'
             },
             body: JSON.stringify({
                 generated_text: generatedText,
@@ -140,11 +109,11 @@ exports.handler = async (event, context) => {
         };
 
     } catch (error) {
-        console.error('Function error:', error);
         return {
             statusCode: 500,
+            headers: { 'Access-Control-Allow-Origin': '*' },
             body: JSON.stringify({ 
-                error: 'Internal server error',
+                error: 'Internal error',
                 details: error.message 
             })
         };

@@ -4,6 +4,7 @@ class NotesApp {
         this.currentNoteId = null;
         this.notes = [];
         this.aiService = new AIService();
+        this.localAIService = new LocalAIService(); // Fallback local AI
         this.lastEnterTime = 0;
         this.initializeElements();
         this.attachEventListeners();
@@ -15,6 +16,7 @@ class NotesApp {
         this.deleteNoteBtn = document.getElementById('deleteNoteBtn');
         this.saveNoteBtn = document.getElementById('saveNoteBtn');
         this.testAIBtn = document.getElementById('testAIBtn');
+        this.toggleAIModeBtn = document.getElementById('toggleAIModeBtn');
         this.noteTitle = document.getElementById('noteTitle');
         this.noteContent = document.getElementById('noteContent');
         this.notesList = document.getElementById('notesList');
@@ -28,6 +30,7 @@ class NotesApp {
         this.deleteNoteBtn.addEventListener('click', () => this.deleteCurrentNote());
         this.saveNoteBtn.addEventListener('click', () => this.saveCurrentNote());
         this.testAIBtn.addEventListener('click', () => this.testAI());
+        this.toggleAIModeBtn.addEventListener('click', () => this.toggleAIMode());
         
         // Auto-save on typing (with debounce)
         let saveTimeout;
@@ -49,7 +52,10 @@ class NotesApp {
         // Show test button if in development mode
         if (window.location.hostname === 'localhost' || window.location.hostname.includes('netlify')) {
             this.testAIBtn.style.display = 'inline-flex';
+            this.toggleAIModeBtn.style.display = 'inline-flex';
         }
+        
+        this.updateAIModeButton();
     }
 
     async loadNotes() {
@@ -317,9 +323,18 @@ class NotesApp {
             
             console.log('Attempting to improve text:', textToImprove.substring(0, 100) + '...');
             
-            const improvedText = await this.aiService.improveText(textToImprove);
+            let improvedText;
             
-            console.log('AI response received:', improvedText ? 'Success' : 'Empty response');
+            // Try external AI first, fallback to local if it fails
+            try {
+                improvedText = await this.aiService.improveText(textToImprove);
+                console.log('External AI response received:', improvedText ? 'Success' : 'Empty response');
+            } catch (externalError) {
+                console.log('External AI failed, using local AI:', externalError.message);
+                this.showSaveStatus('🤖 Using local AI...', 'loading');
+                improvedText = await this.localAIService.improveText(textToImprove);
+                console.log('Local AI response received:', improvedText ? 'Success' : 'Empty response');
+            }
             
             if (improvedText && improvedText.trim()) {
                 // Replace the text before cursor with improved version
@@ -340,7 +355,7 @@ class NotesApp {
                     await this.saveCurrentNote(true);
                 }
                 
-                this.showSaveStatus('✨ Text improved by AI!', 'success');
+                this.showSaveStatus('✨ Text improved by local AI!', 'success');
                 setTimeout(() => this.showSaveStatus(''), 3000);
             } else {
                 this.showSaveStatus('AI couldn\'t improve this text', 'error');
@@ -395,6 +410,21 @@ class NotesApp {
         } catch (error) {
             console.error('AI test failed:', error);
             this.showSaveStatus(`❌ AI test failed: ${error.message}`, 'error');
+        }
+    }
+
+    toggleAIMode() {
+        this.aiService.useLocalOnly = !this.aiService.useLocalOnly;
+        this.updateAIModeButton();
+        
+        const mode = this.aiService.useLocalOnly ? 'Local AI' : 'External AI';
+        this.showSaveStatus(`Switched to ${mode}`, 'success');
+        setTimeout(() => this.showSaveStatus(''), 2000);
+    }
+
+    updateAIModeButton() {
+        if (this.toggleAIModeBtn) {
+            this.toggleAIModeBtn.textContent = this.aiService.useLocalOnly ? '🔄 Local AI' : '🌐 External AI';
         }
     }
 }
