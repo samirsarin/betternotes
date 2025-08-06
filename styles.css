@@ -223,6 +223,24 @@ body {
     color: #64748b;
 }
 
+.save-status.loading {
+    color: #3b82f6;
+    animation: pulse 1.5s infinite;
+}
+
+.save-status.success {
+    color: #10b981;
+}
+
+.save-status.error {
+    color: #ef4444;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
 .welcome-message {
     display: flex;
     flex-direction: column;

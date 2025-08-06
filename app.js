@@ -3,6 +3,8 @@ class NotesApp {
     constructor() {
         this.currentNoteId = null;
         this.notes = [];
+        this.aiService = new AIService();
+        this.lastEnterTime = 0;
         this.initializeElements();
         this.attachEventListeners();
         this.loadNotes();
@@ -38,6 +40,9 @@ class NotesApp {
         
         this.noteTitle.addEventListener('input', autoSave);
         this.noteContent.addEventListener('input', autoSave);
+        
+        // AI improvement on double Enter
+        this.noteContent.addEventListener('keydown', (e) => this.handleKeyDown(e));
     }
 
     async loadNotes() {
@@ -262,6 +267,78 @@ class NotesApp {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    async handleKeyDown(event) {
+        if (event.key === 'Enter') {
+            const currentTime = Date.now();
+            const timeDiff = currentTime - this.lastEnterTime;
+            
+            // Double tap detection (within 500ms)
+            if (timeDiff < 500 && timeDiff > 0) {
+                event.preventDefault(); // Prevent second enter
+                await this.improveTextWithAI();
+            }
+            
+            this.lastEnterTime = currentTime;
+        }
+    }
+
+    async improveTextWithAI() {
+        if (!this.aiService.isAvailable()) {
+            this.showSaveStatus('AI is busy, please wait...', 'loading');
+            return;
+        }
+
+        const textarea = this.noteContent;
+        const cursorPos = textarea.selectionStart;
+        const textBeforeCursor = textarea.value.substring(0, cursorPos);
+        
+        // Find the last double newline or start of text
+        const lastDoubleNewline = textBeforeCursor.lastIndexOf('\n\n');
+        const textToImprove = lastDoubleNewline !== -1 
+            ? textBeforeCursor.substring(lastDoubleNewline + 2)
+            : textBeforeCursor;
+
+        if (!textToImprove.trim()) {
+            this.showSaveStatus('No text to improve', 'error');
+            return;
+        }
+
+        try {
+            this.showSaveStatus('🤖 AI is improving your text...', 'loading');
+            
+            const improvedText = await this.aiService.improveText(textToImprove);
+            
+            if (improvedText && improvedText.trim()) {
+                // Replace the text before cursor with improved version
+                const beforeImprovement = lastDoubleNewline !== -1 
+                    ? textarea.value.substring(0, lastDoubleNewline + 2)
+                    : '';
+                const afterCursor = textarea.value.substring(cursorPos);
+                
+                // Insert improved text
+                textarea.value = beforeImprovement + improvedText + '\n\n' + afterCursor;
+                
+                // Position cursor after improved text
+                const newCursorPos = beforeImprovement.length + improvedText.length + 2;
+                textarea.setSelectionRange(newCursorPos, newCursorPos);
+                
+                // Auto-save the improved note
+                if (this.currentNoteId) {
+                    await this.saveCurrentNote(true);
+                }
+                
+                this.showSaveStatus('✨ Text improved by AI!', 'success');
+                setTimeout(() => this.showSaveStatus(''), 3000);
+            } else {
+                this.showSaveStatus('AI couldn\'t improve this text', 'error');
+            }
+            
+        } catch (error) {
+            console.error('AI improvement failed:', error);
+            this.showSaveStatus('AI improvement failed. Try again later.', 'error');
+        }
     }
 }
 

@@ -2,6 +2,10 @@
   publish = "."
   command = "echo 'No build step needed for static site'"
 
+[build.environment]
+  # Environment variables for build process
+  NODE_VERSION = "18"
+
 [[headers]]
   for = "/*"
   [headers.values]
