@@ -7,7 +7,13 @@ class NotesApp {
         this.lastEnterTime = 0;
         
         // Initialize enhanced markdown renderer (primary)
-        this.markdownRenderer = new MarkdownRenderer();
+        try {
+            this.markdownRenderer = new MarkdownRenderer();
+            console.log('MarkdownRenderer initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize MarkdownRenderer:', error);
+            this.markdownRenderer = null;
+        }
         
         // Keep Showdown as backup (for backward compatibility)
         this.markdownConverter = new showdown.Converter({
@@ -421,18 +427,60 @@ class NotesApp {
         const content = this.noteContent.value;
         if (content.trim()) {
             console.log('Original content for rendering:', content);
+            console.log('noteContentFormatted element:', this.noteContentFormatted);
+            console.log('noteContentFormatted tagName:', this.noteContentFormatted?.tagName);
             
-            // Use the enhanced markdown renderer (marked + DOMPurify)
-            // This is the main function that implements your requirements:
-            // 1. ✅ Target Element: this.noteContentFormatted (responseContainer)
-            // 2. ✅ Dependencies: marked + DOMPurify loaded via CDN  
-            // 3. ✅ Rendering Function: this.markdownRenderer.renderMarkdown()
-            // 4. ✅ Implementation: marked.parse() + DOMPurify.sanitize() + innerHTML
-            // 5. ✅ Integration: Called from AI response handler and view switching
-            this.markdownRenderer.renderMarkdown(content, this.noteContentFormatted);
+            // Ensure we have a valid container element
+            if (!this.noteContentFormatted) {
+                console.error('noteContentFormatted element not found, re-initializing...');
+                this.noteContentFormatted = document.getElementById('noteContentFormatted');
+            }
+            
+            // Try the enhanced markdown renderer first
+            if (this.markdownRenderer && this.noteContentFormatted) {
+                try {
+                    console.log('Using enhanced markdown renderer...');
+                    this.markdownRenderer.renderMarkdown(content, this.noteContentFormatted);
+                } catch (error) {
+                    console.error('Enhanced renderer failed, using fallback:', error);
+                    this.renderWithShowdownFallback(content);
+                }
+            } else {
+                console.log('Enhanced renderer not available, using fallback...');
+                this.renderWithShowdownFallback(content);
+            }
             
         } else {
-            this.noteContentFormatted.innerHTML = '';
+            if (this.noteContentFormatted) {
+                this.noteContentFormatted.innerHTML = '';
+            }
+        }
+    }
+
+    renderWithShowdownFallback(content) {
+        try {
+            if (this.markdownConverter && this.noteContentFormatted) {
+                console.log('Using Showdown fallback renderer...');
+                const processedContent = this.preprocessMarkdown(content);
+                const html = this.markdownConverter.makeHtml(processedContent);
+                this.noteContentFormatted.innerHTML = html;
+            } else {
+                console.log('Using basic text rendering...');
+                // Last resort: basic text with line breaks
+                this.noteContentFormatted.innerHTML = content
+                    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                    .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                    .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+                    .replace(/^\- (.*$)/gm, '<li>$1</li>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/\n/g, '<br>');
+            }
+        } catch (error) {
+            console.error('All rendering methods failed:', error);
+            if (this.noteContentFormatted) {
+                this.noteContentFormatted.innerHTML = '<p class="error">Error rendering content</p>';
+            }
         }
     }
 
@@ -480,6 +528,14 @@ class NotesApp {
 
 // Initialize the app when the page loads
 document.addEventListener('DOMContentLoaded', () => {
+    // Debug: Check what libraries are available
+    console.log('Libraries check:', {
+        firebase: typeof firebase !== 'undefined',
+        marked: typeof marked !== 'undefined',
+        DOMPurify: typeof DOMPurify !== 'undefined',
+        showdown: typeof showdown !== 'undefined'
+    });
+
     // Check if Firebase is initialized
     if (typeof firebase === 'undefined') {
         document.body.innerHTML = `

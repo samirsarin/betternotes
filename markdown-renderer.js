@@ -71,8 +71,13 @@ class MarkdownRenderer {
                 return;
             }
             
-            if (!responseContainer || !responseContainer.innerHTML) {
-                console.error('Invalid response container');
+            if (!responseContainer) {
+                console.error('Invalid response container: element is null or undefined');
+                return;
+            }
+            
+            if (!responseContainer.tagName) {
+                console.error('Invalid response container: not a DOM element', responseContainer);
                 return;
             }
             
