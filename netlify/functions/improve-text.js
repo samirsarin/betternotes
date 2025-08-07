@@ -82,6 +82,7 @@ exports.handler = async (event, context) => {
 - Add bullet points about topic
 - Add any related information that you would expect to see in a note about the topic
 
+Don't include any markdown formatting and keep a general formatting where the text is seperated by new lines when needed.
 Original text: "${text}"
 
 Please respond with only the improved text, nothing else:`;
