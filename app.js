@@ -78,6 +78,8 @@ class NotesApp {
         
         // Click on formatted view to start editing
         this.noteContentFormatted.addEventListener('click', () => {
+            // Convert the current formatted content back to clean text for editing
+            this.convertFormattedToPlainText();
             this.showPlainTextView();
             this.noteContent.focus();
         });
@@ -427,33 +429,60 @@ class NotesApp {
         const content = this.noteContent.value;
         if (content.trim()) {
             console.log('Original content for rendering:', content);
-            console.log('noteContentFormatted element:', this.noteContentFormatted);
-            console.log('noteContentFormatted tagName:', this.noteContentFormatted?.tagName);
             
-            // Ensure we have a valid container element
+            // Ensure the element exists before rendering
             if (!this.noteContentFormatted) {
-                console.error('noteContentFormatted element not found, re-initializing...');
+                console.error('noteContentFormatted element not found, reinitializing...');
                 this.noteContentFormatted = document.getElementById('noteContentFormatted');
             }
             
-            // Try the enhanced markdown renderer first
-            if (this.markdownRenderer && this.noteContentFormatted) {
-                try {
-                    console.log('Using enhanced markdown renderer...');
-                    this.markdownRenderer.renderMarkdown(content, this.noteContentFormatted);
-                } catch (error) {
-                    console.error('Enhanced renderer failed, using fallback:', error);
-                    this.renderWithShowdownFallback(content);
-                }
-            } else {
-                console.log('Enhanced renderer not available, using fallback...');
-                this.renderWithShowdownFallback(content);
-            }
+            // Since AI now outputs clean text, convert it to nice HTML formatting
+            this.renderCleanTextAsHTML(content);
             
         } else {
             if (this.noteContentFormatted) {
                 this.noteContentFormatted.innerHTML = '';
             }
+        }
+    }
+    
+    renderCleanTextAsHTML(content) {
+        try {
+            // Convert clean text to nicely formatted HTML
+            let html = content
+                // Convert lines that look like titles (ALL CAPS or Title Case followed by colon/newline)
+                .replace(/^([A-Z][A-Za-z\s\(\)]+)$/gm, '<h3>$1</h3>')
+                .replace(/^([A-Z\s\(\)]+)$/gm, '<h3>$1</h3>')
+                
+                // Convert bullet points (• or -)
+                .replace(/^[•\-]\s*(.+)$/gm, '<li>$1</li>')
+                
+                // Wrap consecutive list items in ul tags
+                .replace(/(<li>.*<\/li>)(\s*<li>.*<\/li>)*/g, (match) => {
+                    return '<ul>' + match + '</ul>';
+                })
+                
+                // Convert double line breaks to paragraph breaks
+                .replace(/\n\n+/g, '</p><p>')
+                
+                // Convert single line breaks to <br>
+                .replace(/\n/g, '<br>')
+                
+                // Wrap in paragraph tags if not empty
+                .replace(/^(.+)/, '<p>$1')
+                .replace(/(.+)$/, '$1</p>')
+                
+                // Clean up empty paragraphs
+                .replace(/<p><\/p>/g, '')
+                .replace(/<p>\s*<br>\s*<\/p>/g, '');
+                
+            this.noteContentFormatted.innerHTML = html;
+            console.log('Rendered clean text as HTML:', html);
+            
+        } catch (error) {
+            console.error('Error rendering clean text:', error);
+            // Fallback: just use line breaks
+            this.noteContentFormatted.innerHTML = content.replace(/\n/g, '<br>');
         }
     }
 
@@ -503,6 +532,60 @@ class NotesApp {
         processed = processed.replace(/\n{4,}/g, '\n\n\n');
         
         return processed;
+    }
+
+    convertFormattedToPlainText() {
+        // Extract clean text from the current formatted content
+        if (this.noteContentFormatted && this.noteContentFormatted.innerHTML.trim()) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = this.noteContentFormatted.innerHTML;
+            
+            // Convert HTML back to clean, readable text
+            let cleanText = '';
+            const walker = document.createTreeWalker(
+                tempDiv,
+                NodeFilter.SHOW_ALL,
+                null,
+                false
+            );
+            
+            let node;
+            while (node = walker.nextNode()) {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    cleanText += node.textContent;
+                } else if (node.nodeType === Node.ELEMENT_NODE) {
+                    const tagName = node.tagName.toLowerCase();
+                    
+                    // Add proper spacing and formatting for different elements
+                    if (tagName === 'h1' || tagName === 'h2' || tagName === 'h3') {
+                        if (cleanText && !cleanText.endsWith('\n\n')) {
+                            cleanText += '\n\n';
+                        }
+                    } else if (tagName === 'p') {
+                        if (cleanText && !cleanText.endsWith('\n')) {
+                            cleanText += '\n';
+                        }
+                    } else if (tagName === 'li') {
+                        if (cleanText && !cleanText.endsWith('\n')) {
+                            cleanText += '\n';
+                        }
+                        cleanText += '• ';
+                    } else if (tagName === 'br') {
+                        cleanText += '\n';
+                    }
+                }
+            }
+            
+            // Clean up the text and update the textarea
+            cleanText = cleanText
+                .replace(/\n{3,}/g, '\n\n')  // Remove excessive line breaks
+                .replace(/^\s+|\s+$/g, '')   // Trim whitespace
+                .replace(/\s+/g, ' ')        // Normalize spaces
+                .replace(/\n\s+/g, '\n');    // Remove leading spaces on new lines
+            
+            this.noteContent.value = cleanText;
+            console.log('Converted formatted content to clean text:', cleanText);
+        }
     }
 
     showPlainTextView() {

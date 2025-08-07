@@ -76,21 +76,32 @@ exports.handler = async (event, context) => {
         }
 
         // Create the prompt for Gemini
-        const prompt = `Improve this student note by making it clearer, fixing errors, and organizing it better.
+        const prompt = `Improve this student note by making it clearer, fixing errors, and organizing it better. Output clean, readable text that looks good in a note-taking app.
 
-STRICT OUTPUT FORMAT (copy this pattern exactly):
-Use # for main topics
-Use ## for subtopics  
-Use - for bullet points
-Use **bold** for important terms
-Put spaces between # and text
-Put spaces between - and text
+FORMATTING RULES:
+- Use clear titles for main topics
+- Create bullet points for lists
+- Use short, concise sentences
+- Group related information together
+- Make it easy to read and study from
 
-Example: # Photosynthesis ## Process - Plants use sunlight - **Chlorophyll** captures light - Produces glucose and oxygen ## Requirements - Sunlight - Water - Carbon dioxide
+Do NOT use markdown symbols like # or **. Just output clean, well-formatted text with proper spacing.
 
-Your turn - improve this text: "${text}"
+Example input: "cpu central processing unit components alu performs math pc program counter holds address"
+Example output: 
+CPU (Central Processing Unit) Components
 
-Output (follow the example pattern):`;
+ALU (Arithmetic Logic Unit)
+• Performs mathematical and logical operations
+• Essential for calculations and comparisons
+
+PC (Program Counter)  
+• Holds the address of the next instruction
+• Different from a personal computer
+
+Original text: "${text}"
+
+Improved version:`;
 
         console.log('Making request to Gemini API...');
 
@@ -222,8 +233,12 @@ Output (follow the example pattern):`;
             };
         }
 
-        // Clean up the response and fix formatting issues
-        generatedText = fixMarkdownFormatting(generatedText.trim());
+        // Clean up the response for plain text output
+        generatedText = generatedText
+            .trim()
+            .replace(/\s+/g, ' ')           // Normalize spaces
+            .replace(/\n\s+/g, '\n')        // Remove leading spaces on new lines
+            .replace(/\n{3,}/g, '\n\n');    // Limit consecutive line breaks
 
         return {
             statusCode: 200,
