@@ -76,11 +76,11 @@ exports.handler = async (event, context) => {
         }
 
         // Create the prompt for Gemini
-        const prompt = `You are an expert at improving text for better note-taking. Please take the following text and make it:
-- More concise and clear
-- Better organized for notes
-- Remove filler words and redundancy
-- Keep the same meaning but improve readability
+        const prompt = `You are an expert at improving text for better note-taking. Assume the following text is a note quickly written by a student in a class. Please take the following text and do the following:
+- Rewrite any text to be correct
+- Fix any spelling errors
+- Add bullet points about topic
+- Add any related information that you would expect to see in a note about the topic
 
 Original text: "${text}"
 
