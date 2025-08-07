@@ -76,34 +76,21 @@ exports.handler = async (event, context) => {
         }
 
         // Create the prompt for Gemini
-        const prompt = `You are an expert at improving text for better note-taking. Take the following student note and improve it by fixing spelling/grammar, making it concise, and organizing it better.
+        const prompt = `Improve this student note by making it clearer, fixing errors, and organizing it better.
 
-CRITICAL FORMATTING RULES - FOLLOW EXACTLY:
-1. Use # for main topics (followed by TWO line breaks)
-2. Use ## for subtopics (followed by TWO line breaks) 
-3. Use - for bullet points (each on separate line)
-4. Use **bold** for key terms
-5. ALWAYS put TWO line breaks (\\n\\n) between sections
-6. ALWAYS put ONE line break (\\n) between bullet points
-7. Never put everything on one line
+STRICT OUTPUT FORMAT (copy this pattern exactly):
+Use # for main topics
+Use ## for subtopics  
+Use - for bullet points
+Use **bold** for important terms
+Put spaces between # and text
+Put spaces between - and text
 
-EXAMPLE FORMAT:
-# Main Topic
+Example: # Photosynthesis ## Process - Plants use sunlight - **Chlorophyll** captures light - Produces glucose and oxygen ## Requirements - Sunlight - Water - Carbon dioxide
 
-## Subtopic
+Your turn - improve this text: "${text}"
 
-- First bullet point
-- Second bullet point
-- Third bullet point
-
-## Another Subtopic
-
-- More bullet points
-- With proper spacing
-
-Original text: "${text}"
-
-Improved version with proper line breaks:`;
+Output (follow the example pattern):`;
 
         console.log('Making request to Gemini API...');
 
@@ -269,38 +256,119 @@ Improved version with proper line breaks:`;
     }
 };
 
-// Function to fix markdown formatting and ensure proper line breaks
+// Function to completely restructure markdown by parsing and rebuilding
 function fixMarkdownFormatting(text) {
-    let fixed = text;
+    console.log('Original messy text:', text);
     
-    // Ensure headers have proper spacing
-    fixed = fixed.replace(/^(#{1,6})\s*(.+)$/gm, '$1 $2\n');
+    // Step 1: Normalize whitespace
+    let normalized = text.replace(/\s+/g, ' ').trim();
     
-    // Ensure bullet points are on separate lines
-    fixed = fixed.replace(/(-\s*.+?)(\s*-\s*)/g, '$1\n$2');
+    // Step 2: Split into tokens and identify markdown elements
+    let tokens = [];
+    let current = '';
     
-    // Fix bullet points that might be inline
-    fixed = fixed.replace(/(-\s*[^-\n]+)(-\s*)/g, '$1\n$2');
+    for (let i = 0; i < normalized.length; i++) {
+        let char = normalized[i];
+        let nextChars = normalized.substring(i, i + 10);
+        
+        // Check for headers
+        if (char === '#' && (i === 0 || normalized[i-1] === ' ')) {
+            if (current.trim()) {
+                tokens.push({type: 'text', content: current.trim()});
+                current = '';
+            }
+            
+            let headerLevel = 0;
+            while (normalized[i] === '#' && headerLevel < 6) {
+                headerLevel++;
+                i++;
+            }
+            
+            // Get header text until next # or bullet or end
+            let headerText = '';
+            while (i < normalized.length && 
+                   !normalized.substring(i).match(/^\s*(#{1,6}|\*|\-)/)) {
+                headerText += normalized[i];
+                i++;
+            }
+            i--; // Back up one
+            
+            tokens.push({
+                type: 'header', 
+                level: headerLevel, 
+                content: headerText.trim()
+            });
+            continue;
+        }
+        
+        // Check for bullets
+        if ((char === '-' || char === '*') && (i === 0 || normalized[i-1] === ' ')) {
+            if (current.trim()) {
+                tokens.push({type: 'text', content: current.trim()});
+                current = '';
+            }
+            
+            i++; // Skip the bullet character
+            while (i < normalized.length && normalized[i] === ' ') i++; // Skip spaces
+            
+            // Get bullet content until next bullet or header or end
+            let bulletText = '';
+            while (i < normalized.length && 
+                   !normalized.substring(i).match(/^\s*(#{1,6}|\*|\-)/)) {
+                bulletText += normalized[i];
+                i++;
+            }
+            i--; // Back up one
+            
+            tokens.push({
+                type: 'bullet', 
+                content: bulletText.trim()
+            });
+            continue;
+        }
+        
+        current += char;
+    }
     
-    // Ensure proper spacing after headers
-    fixed = fixed.replace(/^(#{1,6}\s*.+)\n?(?!\n)/gm, '$1\n\n');
+    // Add any remaining text
+    if (current.trim()) {
+        tokens.push({type: 'text', content: current.trim()});
+    }
     
-    // Ensure bullet points have proper line breaks
-    fixed = fixed.replace(/^(-\s*.+)$/gm, '$1');
+    // Step 3: Rebuild with proper formatting
+    let result = '';
     
-    // Add line breaks before bullet point sections
-    fixed = fixed.replace(/([^\n])\n(-\s*)/g, '$1\n\n$2');
+    for (let i = 0; i < tokens.length; i++) {
+        let token = tokens[i];
+        
+        if (token.type === 'header') {
+            if (result && !result.endsWith('\n\n')) {
+                result += '\n\n';
+            }
+            result += '#'.repeat(token.level) + ' ' + token.content + '\n\n';
+        }
+        else if (token.type === 'bullet') {
+            // Check if this is the first bullet in a series
+            if (i === 0 || tokens[i-1].type !== 'bullet') {
+                if (result && !result.endsWith('\n\n')) {
+                    result += '\n\n';
+                }
+            }
+            result += '- ' + token.content + '\n';
+        }
+        else if (token.type === 'text') {
+            if (result && !result.endsWith('\n\n') && !result.endsWith('\n')) {
+                result += '\n\n';
+            }
+            result += token.content + '\n\n';
+        }
+    }
     
-    // Clean up multiple consecutive line breaks (max 2)
-    fixed = fixed.replace(/\n{3,}/g, '\n\n');
+    // Final cleanup
+    result = result.replace(/\n{3,}/g, '\n\n').trim();
     
-    // Ensure list items are properly separated
-    fixed = fixed.replace(/^-\s*(.+)(?=\n-)/gm, '- $1');
-    
-    // Fix any remaining formatting issues
-    fixed = fixed.replace(/^\s*-\s*/gm, '- ');
-    
-    return fixed.trim();
+    console.log('Rebuilt text:', result);
+    return result;
 }
 
    

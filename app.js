@@ -415,9 +415,12 @@ class NotesApp {
     renderFormattedContent() {
         const content = this.noteContent.value;
         if (content.trim()) {
+            console.log('Original content for rendering:', content);
             // Pre-process the content to ensure proper formatting
             const processedContent = this.preprocessMarkdown(content);
+            console.log('Processed content:', processedContent);
             const html = this.markdownConverter.makeHtml(processedContent);
+            console.log('Generated HTML:', html);
             this.noteContentFormatted.innerHTML = html;
         } else {
             this.noteContentFormatted.innerHTML = '';
