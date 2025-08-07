@@ -15,6 +15,7 @@ class NotesApp {
         this.newNoteBtn = document.getElementById('newNoteBtn');
         this.deleteNoteBtn = document.getElementById('deleteNoteBtn');
         this.saveNoteBtn = document.getElementById('saveNoteBtn');
+        this.improveTextBtn = document.getElementById('improveTextBtn');
         this.testAIBtn = document.getElementById('testAIBtn');
         this.toggleAIModeBtn = document.getElementById('toggleAIModeBtn');
         this.noteTitle = document.getElementById('noteTitle');
@@ -29,6 +30,7 @@ class NotesApp {
         this.newNoteBtn.addEventListener('click', () => this.createNewNote());
         this.deleteNoteBtn.addEventListener('click', () => this.deleteCurrentNote());
         this.saveNoteBtn.addEventListener('click', () => this.saveCurrentNote());
+        this.improveTextBtn.addEventListener('click', () => this.improveTextWithAI());
         this.testAIBtn.addEventListener('click', () => this.testAI());
         this.toggleAIModeBtn.addEventListener('click', () => this.toggleAIMode());
         
@@ -287,8 +289,11 @@ class NotesApp {
             const currentTime = Date.now();
             const timeDiff = currentTime - this.lastEnterTime;
             
-            // Double tap detection (within 500ms)
-            if (timeDiff < 500 && timeDiff > 0) {
+            console.log('Enter pressed. Time diff:', timeDiff, 'ms');
+            
+            // Double tap detection (within 800ms but more than 50ms to avoid accidental)
+            if (timeDiff < 800 && timeDiff > 50) {
+                console.log('Double Enter detected! Triggering AI improvement...');
                 event.preventDefault(); // Prevent second enter
                 await this.improveTextWithAI();
             }
@@ -298,7 +303,10 @@ class NotesApp {
     }
 
     async improveTextWithAI() {
+        console.log('=== AI Improvement Started ===');
+        
         if (!this.aiService.isAvailable()) {
+            console.log('AI service not available');
             this.showSaveStatus('AI is busy, please wait...', 'loading');
             return;
         }
@@ -307,13 +315,19 @@ class NotesApp {
         const cursorPos = textarea.selectionStart;
         const textBeforeCursor = textarea.value.substring(0, cursorPos);
         
+        console.log('Cursor position:', cursorPos);
+        console.log('Text before cursor:', textBeforeCursor.substring(0, 100) + '...');
+        
         // Find the last double newline or start of text
         const lastDoubleNewline = textBeforeCursor.lastIndexOf('\n\n');
         const textToImprove = lastDoubleNewline !== -1 
             ? textBeforeCursor.substring(lastDoubleNewline + 2)
             : textBeforeCursor;
 
+        console.log('Text to improve:', textToImprove);
+
         if (!textToImprove.trim()) {
+            console.log('No text to improve - empty or whitespace only');
             this.showSaveStatus('No text to improve', 'error');
             return;
         }
@@ -337,29 +351,38 @@ class NotesApp {
             }
             
             if (improvedText && improvedText.trim()) {
+                console.log('AI improvement successful. Improved text:', improvedText);
+                
                 // Replace the text before cursor with improved version
                 const beforeImprovement = lastDoubleNewline !== -1 
                     ? textarea.value.substring(0, lastDoubleNewline + 2)
                     : '';
                 const afterCursor = textarea.value.substring(cursorPos);
                 
+                console.log('Before improvement:', beforeImprovement.length, 'chars');
+                console.log('After cursor:', afterCursor.length, 'chars');
+                
                 // Insert improved text
-                textarea.value = beforeImprovement + improvedText + '\n\n' + afterCursor;
+                const newText = beforeImprovement + improvedText + '\n\n' + afterCursor;
+                console.log('Setting new textarea value. Length:', newText.length);
+                textarea.value = newText;
                 
                 // Position cursor after improved text
                 const newCursorPos = beforeImprovement.length + improvedText.length + 2;
+                console.log('Setting cursor to position:', newCursorPos);
                 textarea.setSelectionRange(newCursorPos, newCursorPos);
                 
                 // Auto-save the improved note
                 if (this.currentNoteId) {
+                    console.log('Auto-saving note...');
                     await this.saveCurrentNote(true);
                 }
                 
                 this.showSaveStatus('✨ Text improved by AI!', 'success');
                 setTimeout(() => this.showSaveStatus(''), 3000);
             } else {
+                console.log('Empty or invalid AI response. Received:', improvedText);
                 this.showSaveStatus('AI couldn\'t improve this text', 'error');
-                console.log('Empty or invalid AI response');
             }
             
         } catch (error) {
