@@ -439,4 +439,15 @@ body {
     border-radius: 8px;
     margin: 1rem 0;
     border: 1px solid #fecaca;
+}
+
+/* Enhanced markdown rendering error styles */
+.note-content-formatted .error {
+    color: #dc3545;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 0.75rem;
+    margin: 0.5rem 0;
+    border-radius: 0.375rem;
+    font-size: 0.9rem;
 } 

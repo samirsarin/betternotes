@@ -5,6 +5,11 @@ class NotesApp {
         this.notes = [];
         this.aiService = new AIService();
         this.lastEnterTime = 0;
+        
+        // Initialize enhanced markdown renderer (primary)
+        this.markdownRenderer = new MarkdownRenderer();
+        
+        // Keep Showdown as backup (for backward compatibility)
         this.markdownConverter = new showdown.Converter({
             headerLevelStart: 1,
             simplifiedAutoLink: true,
@@ -416,12 +421,16 @@ class NotesApp {
         const content = this.noteContent.value;
         if (content.trim()) {
             console.log('Original content for rendering:', content);
-            // Pre-process the content to ensure proper formatting
-            const processedContent = this.preprocessMarkdown(content);
-            console.log('Processed content:', processedContent);
-            const html = this.markdownConverter.makeHtml(processedContent);
-            console.log('Generated HTML:', html);
-            this.noteContentFormatted.innerHTML = html;
+            
+            // Use the enhanced markdown renderer (marked + DOMPurify)
+            // This is the main function that implements your requirements:
+            // 1. ✅ Target Element: this.noteContentFormatted (responseContainer)
+            // 2. ✅ Dependencies: marked + DOMPurify loaded via CDN  
+            // 3. ✅ Rendering Function: this.markdownRenderer.renderMarkdown()
+            // 4. ✅ Implementation: marked.parse() + DOMPurify.sanitize() + innerHTML
+            // 5. ✅ Integration: Called from AI response handler and view switching
+            this.markdownRenderer.renderMarkdown(content, this.noteContentFormatted);
+            
         } else {
             this.noteContentFormatted.innerHTML = '';
         }
