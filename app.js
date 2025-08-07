@@ -59,7 +59,15 @@ class NotesApp {
         this.noteContent.addEventListener('focus', () => this.showPlainTextView());
         this.noteContent.addEventListener('blur', () => {
             // Small delay to allow for clicking within the editor
-            setTimeout(() => this.maybeShowFormattedView(), 100);
+            setTimeout(() => this.maybeShowFormattedView(), 200);
+        });
+        
+        // Add input listener to update formatting in real-time
+        this.noteContent.addEventListener('input', () => {
+            // Update formatted view if currently visible
+            if (this.noteContentFormatted.style.display !== 'none') {
+                this.renderFormattedContent();
+            }
         });
         
         // Click on formatted view to start editing
@@ -123,7 +131,8 @@ class NotesApp {
             this.selectNote(docRef.id);
             this.showSaveStatus('New note created', 'success');
             
-            // Focus on title input
+            // Start in edit mode for new notes
+            this.showPlainTextView();
             this.noteTitle.focus();
             this.noteTitle.select();
         } catch (error) {
@@ -204,8 +213,8 @@ class NotesApp {
         this.noteTitle.value = note.title;
         this.noteContent.value = note.content;
         
-        // Render formatted content
-        this.renderFormattedContent();
+        // Show formatted view by default
+        this.showFormattedView();
         
         this.showEditor();
         this.updateActiveNote();
@@ -222,7 +231,9 @@ class NotesApp {
         }
 
         const notesHTML = this.notes.map(note => {
-            const preview = note.content.substring(0, 100) || 'No content...';
+            // Clean markdown from preview
+            let preview = note.content.substring(0, 100) || 'No content...';
+            preview = this.cleanMarkdownForPreview(preview);
             const date = this.formatDate(note.updatedAt);
             
             return `
@@ -264,6 +275,9 @@ class NotesApp {
         this.editorArea.style.display = 'flex';
         this.welcomeMessage.style.display = 'none';
         this.deleteNoteBtn.style.display = 'inline-flex';
+        
+        // Ensure we start in formatted view when opening an editor
+        this.showFormattedView();
     }
 
     showSaveStatus(message, type = '') {
@@ -294,6 +308,28 @@ class NotesApp {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    cleanMarkdownForPreview(text) {
+        let cleaned = text;
+        
+        // Remove headers
+        cleaned = cleaned.replace(/^#{1,6}\s+/gm, '');
+        
+        // Remove bold/italic
+        cleaned = cleaned.replace(/\*\*(.*?)\*\*/g, '$1');
+        cleaned = cleaned.replace(/\*(.*?)\*/g, '$1');
+        cleaned = cleaned.replace(/__(.*?)__/g, '$1');
+        cleaned = cleaned.replace(/_(.*?)_/g, '$1');
+        
+        // Remove list markers
+        cleaned = cleaned.replace(/^\s*[\*\+\-]\s+/gm, '');
+        cleaned = cleaned.replace(/^\s*\d+\.\s+/gm, '');
+        
+        // Remove extra whitespace
+        cleaned = cleaned.replace(/\s+/g, ' ').trim();
+        
+        return cleaned;
     }
 
     async handleKeyDown(event) {
@@ -415,19 +451,25 @@ class NotesApp {
             const html = this.markdownConverter.makeHtml(content);
             this.noteContentFormatted.innerHTML = html;
         } else {
-            this.noteContentFormatted.innerHTML = '';
+            this.noteContentFormatted.innerHTML = '<p class="empty-note-placeholder">Click here to start writing your note...<br><small>Double-tap Enter to improve text with AI</small></p>';
         }
     }
 
     showPlainTextView() {
         this.noteContent.style.display = 'block';
         this.noteContentFormatted.style.display = 'none';
+        // Show edit mode indicator
+        this.showSaveStatus('✏️ Editing mode - Click away to view formatted', 'loading');
     }
 
     showFormattedView() {
         this.renderFormattedContent();
         this.noteContent.style.display = 'none';
         this.noteContentFormatted.style.display = 'block';
+        // Clear edit mode indicator
+        if (this.saveStatus.textContent.includes('Editing mode')) {
+            this.showSaveStatus('', '');
+        }
     }
 
     maybeShowFormattedView() {
