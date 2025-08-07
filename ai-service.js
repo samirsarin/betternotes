@@ -4,7 +4,7 @@ class AIService {
         // We'll use Netlify Functions to keep the API key secure
         this.apiEndpoint = '/.netlify/functions/improve-text';
         this.isProcessing = false;
-        this.useLocalOnly = true; // Use local AI by default since HF models are unreliable
+        this.useLocalOnly = false; // Use Gemini AI by default
     }
 
     async improveText(text) {
@@ -80,8 +80,8 @@ Improved version:`;
                 throw new Error('AI service returned empty response');
             }
             
-            // Clean up the response
-            improvedText = this.cleanImprovedText(improvedText, prompt);
+            // Clean up the GPT-2 response
+            improvedText = this.cleanGPT2Response(improvedText, text);
             
             console.log('Cleaned improved text:', improvedText.substring(0, 200) + '...');
             
@@ -101,29 +101,35 @@ Improved version:`;
         }
     }
 
-    cleanImprovedText(generatedText, originalPrompt) {
-        // Remove the original prompt from the response
+    cleanGPT2Response(generatedText, originalText) {
         let cleaned = generatedText;
         
-        // Try to extract just the improved version
-        const improvedIndex = cleaned.toLowerCase().indexOf('improved version:');
+        // Remove the original prompt
+        const improvedMarker = 'Improved:';
+        const improvedIndex = cleaned.indexOf(improvedMarker);
         if (improvedIndex !== -1) {
-            cleaned = cleaned.substring(improvedIndex + 'improved version:'.length);
+            cleaned = cleaned.substring(improvedIndex + improvedMarker.length);
         }
         
-        // Remove any remaining prompt text
-        const lines = cleaned.split('\n');
-        const relevantLines = lines.filter(line => {
-            const lower = line.toLowerCase().trim();
-            return lower && 
-                   !lower.includes('please improve') &&
-                   !lower.includes('following text') &&
-                   !lower.includes('make it clearer') &&
-                   !lower.includes('more concise') &&
-                   !lower.includes('note-taking');
-        });
+        // Remove the original text if it appears
+        if (cleaned.includes(originalText)) {
+            cleaned = cleaned.replace(originalText, '');
+        }
         
-        return relevantLines.join('\n').trim();
+        // Remove common prompt artifacts
+        cleaned = cleaned.replace(/Original:/g, '');
+        cleaned = cleaned.replace(/Improve this text for better note-taking:/g, '');
+        
+        // Clean up line breaks and extra whitespace
+        cleaned = cleaned.split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0)
+            .join(' ');
+        
+        // Remove any remaining artifacts
+        cleaned = cleaned.replace(/^[\s\n\r]+/, '').replace(/[\s\n\r]+$/, '');
+        
+        return cleaned || originalText; // Fallback to original if cleaning fails
     }
 
     isAvailable() {

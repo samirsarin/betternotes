@@ -330,8 +330,8 @@ class NotesApp {
                 improvedText = await this.aiService.improveText(textToImprove);
                 console.log('External AI response received:', improvedText ? 'Success' : 'Empty response');
             } catch (externalError) {
-                console.log('External AI failed, using local AI:', externalError.message);
-                this.showSaveStatus('🤖 Using local AI...', 'loading');
+                console.log('Gemini AI failed, using local AI fallback:', externalError.message);
+                this.showSaveStatus('🔄 Using local AI fallback...', 'loading');
                 improvedText = await this.localAIService.improveText(textToImprove);
                 console.log('Local AI response received:', improvedText ? 'Success' : 'Empty response');
             }
@@ -355,7 +355,7 @@ class NotesApp {
                     await this.saveCurrentNote(true);
                 }
                 
-                this.showSaveStatus('✨ Text improved by local AI!', 'success');
+                this.showSaveStatus('✨ Text improved by AI!', 'success');
                 setTimeout(() => this.showSaveStatus(''), 3000);
             } else {
                 this.showSaveStatus('AI couldn\'t improve this text', 'error');
@@ -417,14 +417,14 @@ class NotesApp {
         this.aiService.useLocalOnly = !this.aiService.useLocalOnly;
         this.updateAIModeButton();
         
-        const mode = this.aiService.useLocalOnly ? 'Local AI' : 'External AI';
+        const mode = this.aiService.useLocalOnly ? 'Local AI' : 'Gemini AI';
         this.showSaveStatus(`Switched to ${mode}`, 'success');
         setTimeout(() => this.showSaveStatus(''), 2000);
     }
 
     updateAIModeButton() {
         if (this.toggleAIModeBtn) {
-            this.toggleAIModeBtn.textContent = this.aiService.useLocalOnly ? '🔄 Local AI' : '🌐 External AI';
+            this.toggleAIModeBtn.textContent = this.aiService.useLocalOnly ? '🔄 Local AI' : '🤖 Gemini AI';
         }
     }
 }

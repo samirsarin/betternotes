@@ -1,5 +1,5 @@
-// Netlify Function to improve text using Hugging Face Flan-T5-Large
-// This keeps your Hugging Face token secure on the server side
+// Netlify Function to improve text using Google Gemini 2.0 Flash
+// This keeps your Google AI Studio API key secure on the server side
 
 exports.handler = async (event, context) => {
     // Handle CORS preflight requests
@@ -51,79 +51,173 @@ exports.handler = async (event, context) => {
                 },
                 body: JSON.stringify({ 
                     success: true, 
-                    message: 'Function is working',
-                    generated_text: 'Test successful'
+                    message: 'Gemini function is working',
+                    generated_text: 'Gemini test successful!'
                 })
             };
         }
 
-        // Get Hugging Face token from environment variables
-        const HF_TOKEN = process.env.HUGGING_FACE_TOKEN;
+        // Get Google AI Studio API key from environment variables
+        const GOOGLE_API_KEY = process.env.GOOGLE_AI_STUDIO_API_KEY;
         
-        if (!HF_TOKEN) {
-            console.error('Hugging Face token not found in environment variables');
+        if (!GOOGLE_API_KEY) {
+            console.error('Google AI Studio API key not found in environment variables');
             return {
                 statusCode: 500,
-                body: JSON.stringify({ error: 'AI service configuration error' })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                body: JSON.stringify({ 
+                    error: 'AI service configuration error',
+                    details: 'GOOGLE_AI_STUDIO_API_KEY environment variable not set'
+                })
             };
         }
 
-        // Call Hugging Face Inference API  
-        // Using t5-base - guaranteed available, cheap, and excellent for text improvement
+        // Create the prompt for Gemini
+        const prompt = `You are an expert at improving text for better note-taking. Please take the following text and make it:
+- More concise and clear
+- Better organized for notes
+- Remove filler words and redundancy
+- Keep the same meaning but improve readability
+
+Original text: "${text}"
+
+Please respond with only the improved text, nothing else:`;
+
+        console.log('Making request to Gemini API...');
+
+        // Call Google Gemini API
         const response = await fetch(
-            'https://api-inference.huggingface.co/models/t5-base',
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_API_KEY}`,
             {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${HF_TOKEN}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    inputs: `paraphrase: ${text}`,
-                    parameters: {
-                        max_length: 100,
-                        temperature: 0.7,
-                        do_sample: true,
-                        top_p: 0.9
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: temperature,
+                        topK: 40,
+                        topP: 0.95,
+                        maxOutputTokens: Math.min(max_length, 1000),
+                        stopSequences: []
                     },
-                    options: {
-                        wait_for_model: true
-                    }
+                    safetySettings: [
+                        {
+                            category: "HARM_CATEGORY_HARASSMENT",
+                            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                        },
+                        {
+                            category: "HARM_CATEGORY_HATE_SPEECH", 
+                            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                        },
+                        {
+                            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                        },
+                        {
+                            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                        }
+                    ]
                 })
             }
         );
 
+        console.log('Gemini API response status:', response.status);
+
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('Hugging Face API error:', response.status, errorText);
+            console.error('Gemini API error:', response.status, errorText);
             
-            // Handle rate limiting
-            if (response.status === 503) {
+            // Handle specific error cases
+            if (response.status === 400) {
                 return {
-                    statusCode: 503,
+                    statusCode: 400,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    },
                     body: JSON.stringify({ 
-                        error: 'AI model is loading, please try again in a moment' 
+                        error: 'Invalid request to Gemini API',
+                        details: errorText
+                    })
+                };
+            } else if (response.status === 403) {
+                return {
+                    statusCode: 403,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    },
+                    body: JSON.stringify({ 
+                        error: 'API key invalid or quota exceeded',
+                        details: 'Check your Google AI Studio API key'
+                    })
+                };
+            } else if (response.status === 429) {
+                return {
+                    statusCode: 429,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    },
+                    body: JSON.stringify({ 
+                        error: 'Rate limit exceeded',
+                        details: 'Please wait a moment and try again'
                     })
                 };
             }
             
             return {
                 statusCode: response.status,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
                 body: JSON.stringify({ 
-                    error: `AI service error: ${response.status}` 
+                    error: `Gemini API error: ${response.status}`,
+                    details: errorText
                 })
             };
         }
 
         const result = await response.json();
-        
-        // Handle different response formats
+        console.log('Gemini API response received');
+
+        // Extract the generated text from Gemini's response format
         let generatedText = '';
-        if (Array.isArray(result) && result.length > 0) {
-            generatedText = result[0].generated_text || '';
-        } else if (result.generated_text) {
-            generatedText = result.generated_text;
+        if (result.candidates && result.candidates.length > 0) {
+            const candidate = result.candidates[0];
+            if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
+                generatedText = candidate.content.parts[0].text || '';
+            }
         }
+
+        if (!generatedText) {
+            console.error('No generated text in Gemini response:', result);
+            return {
+                statusCode: 500,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                body: JSON.stringify({ 
+                    error: 'Gemini returned empty response',
+                    details: 'No text generated'
+                })
+            };
+        }
+
+        // Clean up the response
+        generatedText = generatedText.trim();
 
         return {
             statusCode: 200,
@@ -135,7 +229,8 @@ exports.handler = async (event, context) => {
             },
             body: JSON.stringify({
                 generated_text: generatedText,
-                success: true
+                success: true,
+                model: 'gemini-2.0-flash-exp'
             })
         };
 
@@ -143,6 +238,10 @@ exports.handler = async (event, context) => {
         console.error('Function error:', error);
         return {
             statusCode: 500,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
             body: JSON.stringify({ 
                 error: 'Internal server error',
                 details: error.message 
