@@ -244,35 +244,71 @@ body {
 .note-content-formatted h1,
 .note-content-formatted h2,
 .note-content-formatted h3 {
-    margin: 1em 0 0.5em 0;
+    margin: 1.5em 0 0.75em 0;
     color: #1e293b;
+    line-height: 1.3;
+}
+
+.note-content-formatted h1:first-child,
+.note-content-formatted h2:first-child,
+.note-content-formatted h3:first-child {
+    margin-top: 0;
 }
 
 .note-content-formatted h1 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    border-bottom: 2px solid #e2e8f0;
-    padding-bottom: 0.25rem;
+    font-size: 1.35rem;
+    font-weight: 700;
+    border-bottom: 2px solid #3b82f6;
+    padding-bottom: 0.4rem;
+    margin-bottom: 1rem;
 }
 
 .note-content-formatted h2 {
-    font-size: 1.125rem;
+    font-size: 1.2rem;
     font-weight: 600;
+    color: #3b82f6;
+    margin-bottom: 0.75rem;
 }
 
 .note-content-formatted h3 {
-    font-size: 1rem;
+    font-size: 1.05rem;
     font-weight: 600;
+    color: #6366f1;
+    margin-bottom: 0.5rem;
 }
 
 .note-content-formatted ul,
 .note-content-formatted ol {
-    margin: 0.5em 0;
-    padding-left: 1.5rem;
+    margin: 0.75em 0;
+    padding-left: 0;
+    list-style: none;
 }
 
-.note-content-formatted li {
-    margin: 0.25em 0;
+.note-content-formatted ul li {
+    margin: 0.4em 0;
+    padding-left: 1.2rem;
+    position: relative;
+    line-height: 1.5;
+}
+
+.note-content-formatted ul li::before {
+    content: "•";
+    color: #3b82f6;
+    font-size: 1.2em;
+    font-weight: bold;
+    position: absolute;
+    left: 0;
+    top: -0.1em;
+}
+
+.note-content-formatted ol {
+    padding-left: 1.5rem;
+    list-style: decimal;
+}
+
+.note-content-formatted ol li {
+    margin: 0.4em 0;
+    line-height: 1.5;
 }
 
 .note-content-formatted strong {
@@ -312,23 +348,6 @@ body {
     padding-left: 1rem;
     color: #64748b;
     font-style: italic;
-}
-
-.empty-note-placeholder {
-    color: #9ca3af;
-    font-style: italic;
-    text-align: center;
-    margin-top: 2rem;
-    cursor: pointer;
-}
-
-.empty-note-placeholder:hover {
-    color: #6b7280;
-}
-
-.empty-note-placeholder small {
-    font-size: 0.875rem;
-    color: #d1d5db;
 }
 
 .editor-footer {

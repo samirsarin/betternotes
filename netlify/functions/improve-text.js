@@ -76,24 +76,34 @@ exports.handler = async (event, context) => {
         }
 
         // Create the prompt for Gemini
-        const prompt = `You are an expert at improving text for better note-taking. Take the following student note and improve it by:
-- Fixing spelling and grammar errors
-- Making it more concise and clear
-- Organizing information better
-- Adding relevant details that would be useful in notes
+        const prompt = `You are an expert at improving text for better note-taking. Take the following student note and improve it by fixing spelling/grammar, making it concise, and organizing it better.
 
-FORMATTING REQUIREMENTS:
-- Use proper markdown formatting for better readability
-- Use # for main topics/headers
-- Use ## for subtopics
-- Use - for bullet points and lists
-- Use **bold** for important terms
-- Use proper line breaks between sections
-- Make it well-structured and easy to read
+CRITICAL FORMATTING RULES - FOLLOW EXACTLY:
+1. Use # for main topics (followed by TWO line breaks)
+2. Use ## for subtopics (followed by TWO line breaks) 
+3. Use - for bullet points (each on separate line)
+4. Use **bold** for key terms
+5. ALWAYS put TWO line breaks (\\n\\n) between sections
+6. ALWAYS put ONE line break (\\n) between bullet points
+7. Never put everything on one line
+
+EXAMPLE FORMAT:
+# Main Topic
+
+## Subtopic
+
+- First bullet point
+- Second bullet point
+- Third bullet point
+
+## Another Subtopic
+
+- More bullet points
+- With proper spacing
 
 Original text: "${text}"
 
-Improved markdown formatted version:`;
+Improved version with proper line breaks:`;
 
         console.log('Making request to Gemini API...');
 
@@ -225,8 +235,8 @@ Improved markdown formatted version:`;
             };
         }
 
-        // Clean up the response (basic cleanup only)
-        generatedText = generatedText.trim();
+        // Clean up the response and fix formatting issues
+        generatedText = fixMarkdownFormatting(generatedText.trim());
 
         return {
             statusCode: 200,
@@ -255,8 +265,42 @@ Improved markdown formatted version:`;
                 error: 'Internal server error',
                 details: error.message 
             })
-        };
+                };
     }
 };
 
- 
+// Function to fix markdown formatting and ensure proper line breaks
+function fixMarkdownFormatting(text) {
+    let fixed = text;
+    
+    // Ensure headers have proper spacing
+    fixed = fixed.replace(/^(#{1,6})\s*(.+)$/gm, '$1 $2\n');
+    
+    // Ensure bullet points are on separate lines
+    fixed = fixed.replace(/(-\s*.+?)(\s*-\s*)/g, '$1\n$2');
+    
+    // Fix bullet points that might be inline
+    fixed = fixed.replace(/(-\s*[^-\n]+)(-\s*)/g, '$1\n$2');
+    
+    // Ensure proper spacing after headers
+    fixed = fixed.replace(/^(#{1,6}\s*.+)\n?(?!\n)/gm, '$1\n\n');
+    
+    // Ensure bullet points have proper line breaks
+    fixed = fixed.replace(/^(-\s*.+)$/gm, '$1');
+    
+    // Add line breaks before bullet point sections
+    fixed = fixed.replace(/([^\n])\n(-\s*)/g, '$1\n\n$2');
+    
+    // Clean up multiple consecutive line breaks (max 2)
+    fixed = fixed.replace(/\n{3,}/g, '\n\n');
+    
+    // Ensure list items are properly separated
+    fixed = fixed.replace(/^-\s*(.+)(?=\n-)/gm, '- $1');
+    
+    // Fix any remaining formatting issues
+    fixed = fixed.replace(/^\s*-\s*/gm, '- ');
+    
+    return fixed.trim();
+}
+
+   
