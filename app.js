@@ -4,7 +4,6 @@ class NotesApp {
         this.currentNoteId = null;
         this.notes = [];
         this.aiService = new AIService();
-        this.localAIService = new LocalAIService(); // Fallback local AI
         this.lastEnterTime = 0;
         this.initializeElements();
         this.attachEventListeners();
@@ -16,8 +15,6 @@ class NotesApp {
         this.deleteNoteBtn = document.getElementById('deleteNoteBtn');
         this.saveNoteBtn = document.getElementById('saveNoteBtn');
         this.improveTextBtn = document.getElementById('improveTextBtn');
-        this.testAIBtn = document.getElementById('testAIBtn');
-        this.toggleAIModeBtn = document.getElementById('toggleAIModeBtn');
         this.noteTitle = document.getElementById('noteTitle');
         this.noteContent = document.getElementById('noteContent');
         this.notesList = document.getElementById('notesList');
@@ -31,8 +28,6 @@ class NotesApp {
         this.deleteNoteBtn.addEventListener('click', () => this.deleteCurrentNote());
         this.saveNoteBtn.addEventListener('click', () => this.saveCurrentNote());
         this.improveTextBtn.addEventListener('click', () => this.improveTextWithAI());
-        this.testAIBtn.addEventListener('click', () => this.testAI());
-        this.toggleAIModeBtn.addEventListener('click', () => this.toggleAIMode());
         
         // Auto-save on typing (with debounce)
         let saveTimeout;
@@ -50,14 +45,6 @@ class NotesApp {
         
         // AI improvement on double Enter
         this.noteContent.addEventListener('keydown', (e) => this.handleKeyDown(e));
-        
-        // Show test button if in development mode
-        if (window.location.hostname === 'localhost' || window.location.hostname.includes('netlify')) {
-            this.testAIBtn.style.display = 'inline-flex';
-            this.toggleAIModeBtn.style.display = 'inline-flex';
-        }
-        
-        this.updateAIModeButton();
     }
 
     async loadNotes() {
@@ -339,16 +326,9 @@ class NotesApp {
             
             let improvedText;
             
-            // Try external AI first, fallback to local if it fails
-            try {
-                improvedText = await this.aiService.improveText(textToImprove);
-                console.log('External AI response received:', improvedText ? 'Success' : 'Empty response');
-            } catch (externalError) {
-                console.log('Gemini AI failed, using local AI fallback:', externalError.message);
-                this.showSaveStatus('🔄 Using local AI fallback...', 'loading');
-                improvedText = await this.localAIService.improveText(textToImprove);
-                console.log('Local AI response received:', improvedText ? 'Success' : 'Empty response');
-            }
+            // Use Gemini AI to improve text
+            improvedText = await this.aiService.improveText(textToImprove);
+            console.log('Gemini AI response received:', improvedText ? 'Success' : 'Empty response');
             
             if (improvedText && improvedText.trim()) {
                 console.log('AI improvement successful. Improved text:', improvedText);
@@ -391,65 +371,17 @@ class NotesApp {
             // More specific error messages
             if (error.message.includes('Failed to fetch')) {
                 this.showSaveStatus('Connection failed. Check internet connection.', 'error');
-            } else if (error.message.includes('503')) {
-                this.showSaveStatus('AI model loading. Try again in 30 seconds.', 'error');
-            } else if (error.message.includes('401') || error.message.includes('403')) {
-                this.showSaveStatus('AI service not configured. Check token.', 'error');
+            } else if (error.message.includes('403')) {
+                this.showSaveStatus('API key invalid or quota exceeded.', 'error');
+            } else if (error.message.includes('429')) {
+                this.showSaveStatus('Rate limit exceeded. Wait a moment.', 'error');
             } else {
                 this.showSaveStatus(`AI error: ${error.message}`, 'error');
             }
         }
     }
 
-    async testAI() {
-        try {
-            this.showSaveStatus('🧪 Testing AI connection...', 'loading');
-            
-            // First test the connection
-            const connectionTest = await this.aiService.testConnection();
-            console.log('Connection test result:', connectionTest);
-            
-            if (!connectionTest.success) {
-                this.showSaveStatus(`Connection failed: ${connectionTest.error || 'Unknown error'}`, 'error');
-                return;
-            }
-            
-            // Test with sample text
-            const sampleText = "This is a test message to check if the AI improvement feature is working correctly.";
-            console.log('Testing with sample text:', sampleText);
-            
-            const result = await this.aiService.improveText(sampleText);
-            
-            if (result) {
-                this.showSaveStatus('✅ AI test successful!', 'success');
-                console.log('AI test result:', result);
-                
-                // Show result in an alert for debugging
-                alert(`AI Test Successful!\n\nOriginal: ${sampleText}\n\nImproved: ${result}`);
-            } else {
-                this.showSaveStatus('❌ AI test failed - empty response', 'error');
-            }
-            
-        } catch (error) {
-            console.error('AI test failed:', error);
-            this.showSaveStatus(`❌ AI test failed: ${error.message}`, 'error');
-        }
-    }
 
-    toggleAIMode() {
-        this.aiService.useLocalOnly = !this.aiService.useLocalOnly;
-        this.updateAIModeButton();
-        
-        const mode = this.aiService.useLocalOnly ? 'Local AI' : 'Gemini AI';
-        this.showSaveStatus(`Switched to ${mode}`, 'success');
-        setTimeout(() => this.showSaveStatus(''), 2000);
-    }
-
-    updateAIModeButton() {
-        if (this.toggleAIModeBtn) {
-            this.toggleAIModeBtn.textContent = this.aiService.useLocalOnly ? '🔄 Local AI' : '🤖 Gemini AI';
-        }
-    }
 }
 
 // Initialize the app when the page loads
