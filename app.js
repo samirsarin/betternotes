@@ -5,6 +5,16 @@ class NotesApp {
         this.notes = [];
         this.aiService = new AIService();
         this.lastEnterTime = 0;
+        this.markdownConverter = new showdown.Converter({
+            headerLevelStart: 1,
+            simplifiedAutoLink: true,
+            strikethrough: true,
+            tables: true,
+            tasklists: true,
+            smartIndentationFix: true,
+            simpleLineBreaks: true,
+            openLinksInNewWindow: true
+        });
         this.initializeElements();
         this.attachEventListeners();
         this.loadNotes();
@@ -14,9 +24,9 @@ class NotesApp {
         this.newNoteBtn = document.getElementById('newNoteBtn');
         this.deleteNoteBtn = document.getElementById('deleteNoteBtn');
         this.saveNoteBtn = document.getElementById('saveNoteBtn');
-        this.improveTextBtn = document.getElementById('improveTextBtn');
         this.noteTitle = document.getElementById('noteTitle');
         this.noteContent = document.getElementById('noteContent');
+        this.noteContentFormatted = document.getElementById('noteContentFormatted');
         this.notesList = document.getElementById('notesList');
         this.editorArea = document.getElementById('editorArea');
         this.welcomeMessage = document.getElementById('welcomeMessage');
@@ -27,7 +37,6 @@ class NotesApp {
         this.newNoteBtn.addEventListener('click', () => this.createNewNote());
         this.deleteNoteBtn.addEventListener('click', () => this.deleteCurrentNote());
         this.saveNoteBtn.addEventListener('click', () => this.saveCurrentNote());
-        this.improveTextBtn.addEventListener('click', () => this.improveTextWithAI());
         
         // Auto-save on typing (with debounce)
         let saveTimeout;
@@ -45,6 +54,19 @@ class NotesApp {
         
         // AI improvement on double Enter
         this.noteContent.addEventListener('keydown', (e) => this.handleKeyDown(e));
+        
+        // Add toggle functionality for formatted view
+        this.noteContent.addEventListener('focus', () => this.showPlainTextView());
+        this.noteContent.addEventListener('blur', () => {
+            // Small delay to allow for clicking within the editor
+            setTimeout(() => this.maybeShowFormattedView(), 100);
+        });
+        
+        // Click on formatted view to start editing
+        this.noteContentFormatted.addEventListener('click', () => {
+            this.showPlainTextView();
+            this.noteContent.focus();
+        });
     }
 
     async loadNotes() {
@@ -181,6 +203,9 @@ class NotesApp {
         this.currentNoteId = noteId;
         this.noteTitle.value = note.title;
         this.noteContent.value = note.content;
+        
+        // Render formatted content
+        this.renderFormattedContent();
         
         this.showEditor();
         this.updateActiveNote();
@@ -347,6 +372,9 @@ class NotesApp {
                 console.log('Setting new textarea value. Length:', newText.length);
                 textarea.value = newText;
                 
+                // Convert the improved text to HTML and display it
+                this.renderFormattedContent();
+                
                 // Position cursor after improved text
                 const newCursorPos = beforeImprovement.length + improvedText.length + 2;
                 console.log('Setting cursor to position:', newCursorPos);
@@ -378,10 +406,38 @@ class NotesApp {
             } else {
                 this.showSaveStatus(`AI error: ${error.message}`, 'error');
             }
+                }
+    }
+
+    renderFormattedContent() {
+        const content = this.noteContent.value;
+        if (content.trim()) {
+            const html = this.markdownConverter.makeHtml(content);
+            this.noteContentFormatted.innerHTML = html;
+        } else {
+            this.noteContentFormatted.innerHTML = '';
         }
     }
 
+    showPlainTextView() {
+        this.noteContent.style.display = 'block';
+        this.noteContentFormatted.style.display = 'none';
+    }
 
+    showFormattedView() {
+        this.renderFormattedContent();
+        this.noteContent.style.display = 'none';
+        this.noteContentFormatted.style.display = 'block';
+    }
+
+    maybeShowFormattedView() {
+        // Only show formatted view if not actively editing
+        if (document.activeElement !== this.noteContent) {
+            this.showFormattedView();
+        }
+    }
+
+ 
 }
 
 // Initialize the app when the page loads

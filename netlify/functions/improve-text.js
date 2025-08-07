@@ -82,16 +82,18 @@ exports.handler = async (event, context) => {
 - Organizing information better
 - Adding relevant details that would be useful in notes
 
-CRITICAL FORMATTING RULES:
-- Use ONLY plain text - NO markdown, NO asterisks, NO hashtags, NO special symbols
-- For lists, use simple dashes (-) or numbers (1., 2., 3.)
-- Separate topics with blank lines
-- Do NOT use **bold**, *italic*, # headers, or any markdown
-- Keep it readable as plain text in a notepad
+FORMATTING REQUIREMENTS:
+- Use proper markdown formatting for better readability
+- Use # for main topics/headers
+- Use ## for subtopics
+- Use - for bullet points and lists
+- Use **bold** for important terms
+- Use proper line breaks between sections
+- Make it well-structured and easy to read
 
 Original text: "${text}"
 
-Improved plain text version:`;
+Improved markdown formatted version:`;
 
         console.log('Making request to Gemini API...');
 
@@ -223,8 +225,8 @@ Improved plain text version:`;
             };
         }
 
-        // Clean up the response and remove any markdown
-        generatedText = cleanMarkdownFromText(generatedText.trim());
+        // Clean up the response (basic cleanup only)
+        generatedText = generatedText.trim();
 
         return {
             statusCode: 200,
@@ -257,47 +259,4 @@ Improved plain text version:`;
     }
 };
 
-// Function to clean markdown formatting from text
-function cleanMarkdownFromText(text) {
-    let cleaned = text;
-    
-    // Remove markdown headers (# ## ###)
-    cleaned = cleaned.replace(/^#{1,6}\s+/gm, '');
-    
-    // Remove bold and italic formatting (**text**, *text*, __text__, _text_)
-    cleaned = cleaned.replace(/\*\*(.*?)\*\*/g, '$1');
-    cleaned = cleaned.replace(/\*(.*?)\*/g, '$1');
-    cleaned = cleaned.replace(/__(.*?)__/g, '$1');
-    cleaned = cleaned.replace(/_(.*?)_/g, '$1');
-    
-    // Remove code blocks and inline code (`code` and ```code```)
-    cleaned = cleaned.replace(/```[\s\S]*?```/g, '');
-    cleaned = cleaned.replace(/`([^`]+)`/g, '$1');
-    
-    // Convert markdown lists to simple dashes
-    cleaned = cleaned.replace(/^\s*[\*\+\-]\s+/gm, '- ');
-    
-    // Convert numbered lists to simple format
-    cleaned = cleaned.replace(/^\s*\d+\.\s+/gm, (match, offset, string) => {
-        const lineStart = string.lastIndexOf('\n', offset) + 1;
-        const lineNum = string.substring(lineStart, offset).match(/^\s*(\d+)\./)?.[1] || '1';
-        return `${lineNum}. `;
-    });
-    
-    // Remove blockquotes (> text)
-    cleaned = cleaned.replace(/^\s*>\s+/gm, '');
-    
-    // Remove horizontal rules (--- or ***)
-    cleaned = cleaned.replace(/^[\-\*]{3,}\s*$/gm, '');
-    
-    // Remove links [text](url) -> text
-    cleaned = cleaned.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1');
-    
-    // Remove extra blank lines (more than 2 consecutive)
-    cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
-    
-    // Clean up any remaining special characters commonly used in markdown
-    cleaned = cleaned.replace(/[▪▫◦•]/g, '-');
-    
-    return cleaned.trim();
-} 
+ 

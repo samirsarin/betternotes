@@ -32,10 +32,12 @@
                         <input type="text" id="noteTitle" placeholder="Untitled Note" class="note-title-input">
                         <button id="deleteNoteBtn" class="btn btn-danger" style="display: none;">🗑️ Delete</button>
                     </div>
-                    <textarea id="noteContent" placeholder="Start typing your note... (Double-tap Enter to improve text with AI)" class="note-content"></textarea>
+                    <div class="note-input-container">
+                        <textarea id="noteContent" placeholder="Start typing your note... (Double-tap Enter to improve text with AI)" class="note-content"></textarea>
+                        <div id="noteContentFormatted" class="note-content-formatted" style="display: none;"></div>
+                    </div>
                     <div class="editor-footer">
                         <button id="saveNoteBtn" class="btn btn-success">💾 Save Note</button>
-                        <button id="improveTextBtn" class="btn btn-primary">✨ Improve Text</button>
                         <span id="saveStatus" class="save-status"></span>
                     </div>
                 </div>
@@ -50,6 +52,9 @@
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <!-- Showdown for Markdown to HTML conversion -->
+    <script src="https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js"></script>
     
     <!-- Your app's JavaScript -->
     <script src="firebase-config.js"></script>
