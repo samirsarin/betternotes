@@ -440,9 +440,9 @@ class NotesApp {
                 this.noteContentFormatted = document.getElementById('noteContentFormatted');
             }
             
-            // Always convert to HTML for proper formatting
-            console.log('Converting to HTML with markdown support');
-            this.renderAsHTML(content);
+            // Render the content as Markdown using the enhanced renderer
+            console.log('Rendering with MarkdownRenderer (marked + DOMPurify)');
+            this.markdownRenderer.renderMarkdown(content, this.noteContentFormatted);
             
             console.log('Raw content being rendered:', JSON.stringify(content));
             console.log('Content character codes:', Array.from(content).map(c => c.charCodeAt(0)));
@@ -454,6 +454,7 @@ class NotesApp {
         }
     }
 
+    // Deprecated HTML renderer retained as fallback but unused
     renderAsHTML(content) {
         // First, convert markdown-style formatting to HTML
         let processedContent = this.convertMarkdownToHTML(content);
