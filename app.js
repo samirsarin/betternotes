@@ -436,16 +436,9 @@ class NotesApp {
                 this.noteContentFormatted = document.getElementById('noteContentFormatted');
             }
             
-            // Try using textContent first (preserves exact formatting)
-            this.noteContentFormatted.textContent = content;
-            
-            // If the content doesn't have proper line breaks, convert to HTML
-            if (!content.includes('\n') || content.split('\n').length < 3) {
-                console.log('Content lacks proper line breaks, converting to HTML');
-                this.renderAsHTML(content);
-            } else {
-                console.log('Using textContent with preserved formatting');
-            }
+            // Always convert to HTML for proper line break display
+            console.log('Converting to HTML for proper formatting');
+            this.renderAsHTML(content);
             
             console.log('Raw content being rendered:', JSON.stringify(content));
             console.log('Content character codes:', Array.from(content).map(c => c.charCodeAt(0)));
@@ -458,29 +451,39 @@ class NotesApp {
     }
 
     renderAsHTML(content) {
-        // Convert content to HTML with forced line breaks
+        // Convert content to HTML with proper paragraph and line break handling
         let html = content
-            // Convert bullet points to HTML lists
-            .replace(/^\s*•\s*(.+)$/gm, '<li>$1</li>')
+            // First, normalize line breaks
+            .replace(/\r\n/g, '\n')
+            .replace(/\r/g, '\n')
             
-            // Wrap consecutive list items in ul tags
-            .replace(/(<li>.*<\/li>\s*)+/g, (match) => {
-                return '<ul>' + match + '</ul>';
+            // Split into paragraphs (separated by double line breaks or more)
+            .split(/\n\s*\n/)
+            .map(paragraph => {
+                paragraph = paragraph.trim();
+                if (!paragraph) return '';
+                
+                // Check if this paragraph contains bullet points
+                if (paragraph.includes('•') || paragraph.match(/^\s*[-*]\s/m)) {
+                    // Handle bullet points
+                    let bulletHtml = paragraph
+                        .replace(/^\s*[•\-*]\s*(.+)$/gm, '<li>$1</li>')
+                        .replace(/\n/g, '<br>');
+                    
+                    // If we have list items, wrap them
+                    if (bulletHtml.includes('<li>')) {
+                        bulletHtml = bulletHtml.replace(/(<li>.*<\/li>)/g, '<ul>$1</ul>');
+                        return bulletHtml;
+                    } else {
+                        return '<p>' + bulletHtml + '</p>';
+                    }
+                } else {
+                    // Regular paragraph - convert single line breaks to <br>
+                    return '<p>' + paragraph.replace(/\n/g, '<br>') + '</p>';
+                }
             })
-            
-            // Convert double line breaks to paragraphs
-            .replace(/\n\n+/g, '</p><p>')
-            
-            // Convert single line breaks to <br>
-            .replace(/\n/g, '<br>')
-            
-            // Wrap in paragraph tags
-            .replace(/^(.+)/, '<p>$1')
-            .replace(/(.+)$/, '$1</p>')
-            
-            // Clean up
-            .replace(/<p><\/p>/g, '')
-            .replace(/<p>\s*<br>\s*<\/p>/g, '');
+            .filter(p => p) // Remove empty paragraphs
+            .join('');
             
         this.noteContentFormatted.innerHTML = html;
         console.log('Rendered as HTML:', html);
@@ -535,12 +538,19 @@ class NotesApp {
     }
 
     convertFormattedToPlainText() {
-        // Since we're now using textContent instead of innerHTML, 
-        // and the formatting is preserved with CSS, we can just copy the text directly
-        if (this.noteContentFormatted && this.noteContentFormatted.textContent.trim()) {
-            // The textContent already contains the properly formatted text with newlines and indentation
-            this.noteContent.value = this.noteContentFormatted.textContent;
-            console.log('Converted formatted content to editable text:', this.noteContentFormatted.textContent);
+        // Convert HTML back to clean text for editing
+        if (this.noteContentFormatted && this.noteContentFormatted.innerHTML.trim()) {
+            // Get the text content and clean it up
+            let plainText = this.noteContentFormatted.textContent || this.noteContentFormatted.innerText;
+            
+            // Clean up extra whitespace while preserving structure
+            plainText = plainText
+                .replace(/\n\s*\n\s*\n/g, '\n\n')  // Reduce excessive line breaks
+                .replace(/^\s+|\s+$/g, '')          // Trim
+                .replace(/[ \t]+$/gm, '');          // Remove trailing spaces
+            
+            this.noteContent.value = plainText;
+            console.log('Converted HTML content to editable text:', plainText);
         }
     }
 

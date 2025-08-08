@@ -235,19 +235,35 @@ body {
     bottom: 0;
     padding: 1rem 0;
     font-size: 1rem;
-    line-height: 1.8;
+    line-height: 1.6;
     color: #374151;
     background: transparent;
     overflow-y: auto;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    
-    /* Preserve AI-generated whitespace and newlines */
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    
-    /* Ensure proper rendering of formatted content */
-    tab-size: 4;
-    -moz-tab-size: 4;
+}
+
+.note-content-formatted p {
+    margin: 0.75em 0;
+    text-align: left;
+    line-height: 1.6;
+}
+
+.note-content-formatted p:first-child {
+    margin-top: 0;
+}
+
+.note-content-formatted p:last-child {
+    margin-bottom: 0;
+}
+
+.note-content-formatted ul {
+    margin: 0.75em 0;
+    padding-left: 1.5em;
+}
+
+.note-content-formatted li {
+    margin: 0.25em 0;
+    line-height: 1.5;
 }
 
 .note-content-formatted h1,
