@@ -391,6 +391,10 @@ class NotesApp {
                 // Convert the improved text to HTML and display it
                 this.renderFormattedContent();
                 
+                // Force show the formatted view after AI improvement
+                console.log('Forcing formatted view display after AI improvement');
+                this.showFormattedView();
+                
                 // Position cursor after improved text
                 const newCursorPos = beforeImprovement.length + improvedText.length + 2;
                 console.log('Setting cursor to position:', newCursorPos);
