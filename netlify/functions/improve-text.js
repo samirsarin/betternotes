@@ -76,35 +76,40 @@ exports.handler = async (event, context) => {
         }
 
         // Create the prompt for Gemini
-        const prompt = `You are formatting student notes for clarity. Improve the content and OUTPUT STRICT MARKDOWN ONLY.
+        const prompt = `Improve this student note by making it clearer, fixing errors, and organizing it better. Use proper spacing, newlines, and indentation to make it easy to read.
 
-REQUIREMENTS (follow exactly):
-- Use one H1 for the main topic: "# Title"
-- Use H2/H3 for sections/subsections
-- Use hyphen bullets "- " (not •) with proper indentation
-- Put ONE bullet per line
-- Leave ONE blank line between blocks (headings, paragraphs, lists)
-- Use **bold** and _italic_ for emphasis where it helps learning
-- No code fences, tables, or HTML unless absolutely necessary
+CRITICAL FORMATTING RULES:
+- Put titles on their own lines
+- Add blank lines between sections
+- Include bullet points whenever possible
+- Use proper indentation for bullet points
+- Include newlines after each bullet point
+- Group related information with proper spacing
+- Make text bold and italic and underlined when appropriate to make it more readable
+
+IMPROVEMENT RULES:
+- Add more information if text includes text similar to "missing information"
+- Always try to add more information on areas lacking
+- Finish unfinished sentences
 
 Example input: "cpu central processing unit components alu performs math pc program counter holds address"
 
 Example output:
-# CPU (Central Processing Unit)
+CPU (Central Processing Unit) Components
 
-## Components
-- ALU (Arithmetic Logic Unit): Performs mathematical and logical operations
-- PC (Program Counter): Holds the address of the next instruction
+ALU (Arithmetic Logic Unit)
+    • Performs mathematical and logical operations
+    • Essential for calculations and comparisons
 
-## Notes
-- CPU is not the same as a personal computer
+PC (Program Counter)
+    • Holds the address of the next instruction
+    • Different from a personal computer
 
-Original text:
-"""
-${text}
-"""
+IMPORTANT: Use actual newlines (\\n) and spaces for indentation. Make sure there are blank lines between sections.
 
-Return ONLY the improved notes in Markdown.`;
+Original text: "${text}"
+
+Improved version:`;
 
         console.log('Making request to Gemini API...');
 
@@ -236,22 +241,18 @@ Return ONLY the improved notes in Markdown.`;
             };
         }
 
-        // Normalize to strict Markdown (bullets/newlines)
+        // Clean up the response while preserving formatting
         console.log('Raw AI response before cleaning:', JSON.stringify(generatedText));
         
         generatedText = generatedText
             .trim()
-            // Normalize Windows line endings
-            .replace(/\r\n?/g, '\n')
-            // Convert any bullet symbols to Markdown hyphens
-            .replace(/^\s*[•\*]\s+/gm, '- ')
-            // Collapse >2 blank lines to exactly one blank line
-            .replace(/\n{3,}/g, '\n\n')
-            // Trim trailing spaces at line ends
-            .replace(/[ \t]+$/gm, '')
-            ;
+            .replace(/\n{4,}/g, '\n\n\n')   // Limit excessive line breaks but allow some spacing
+            .replace(/[ \t]+$/gm, '');      // Remove trailing spaces but preserve line structure
+            
+        console.log('Cleaned AI response:', JSON.stringify(generatedText));
         
-        console.log('Cleaned AI response (markdown):', JSON.stringify(generatedText));
+        // Force proper formatting if AI didn't follow rules
+        generatedText = forceProperFormatting(generatedText);
 
         return {
             statusCode: 200,

@@ -41,11 +41,6 @@ class NotesApp {
         this.noteTitle = document.getElementById('noteTitle');
         this.noteContent = document.getElementById('noteContent');
         this.noteContentFormatted = document.getElementById('noteContentFormatted');
-        // Make formatted container the single editing surface
-        this.noteContentFormatted.setAttribute('contenteditable', 'true');
-        this.noteContentFormatted.setAttribute('spellcheck', 'true');
-        // Keep textarea hidden but used as a backing store (markdown)
-        this.noteContent.style.display = 'none';
         this.notesList = document.getElementById('notesList');
         this.editorArea = document.getElementById('editorArea');
         this.welcomeMessage = document.getElementById('welcomeMessage');
@@ -72,13 +67,22 @@ class NotesApp {
         this.noteContent.addEventListener('input', autoSave);
         
         // AI improvement on double Enter
-        // Disable textarea keydown (hidden)
-        // this.noteContent.addEventListener('keydown', (e) => this.handleKeyDown(e));
+        this.noteContent.addEventListener('keydown', (e) => this.handleKeyDown(e));
         
-        // Single-surface editing: handle input on the formatted container
-        this.noteContentFormatted.addEventListener('input', () => this.syncFormattedToMarkdown());
-        this.noteContentFormatted.addEventListener('blur', () => this.commitFormattedToMarkdownAndRender());
-        this.noteContentFormatted.addEventListener('keydown', (e) => this.handleKeyDownOnFormatted(e));
+        // Add toggle functionality for formatted view
+        this.noteContent.addEventListener('focus', () => this.showPlainTextView());
+        this.noteContent.addEventListener('blur', () => {
+            // Small delay to allow for clicking within the editor
+            setTimeout(() => this.maybeShowFormattedView(), 100);
+        });
+        
+        // Click on formatted view to start editing
+        this.noteContentFormatted.addEventListener('click', () => {
+            // Convert the current formatted content back to clean text for editing
+            this.convertFormattedToPlainText();
+            this.showPlainTextView();
+            this.noteContent.focus();
+        });
     }
 
     async loadNotes() {
@@ -335,11 +339,8 @@ class NotesApp {
             return;
         }
 
-        // Ensure backing markdown is current with the visible editor
-        this.syncFormattedToMarkdown();
         const textarea = this.noteContent;
-        // If selection data is unavailable in hidden textarea, use end
-        const cursorPos = typeof textarea.selectionStart === 'number' ? textarea.selectionStart : textarea.value.length;
+        const cursorPos = textarea.selectionStart;
         const textBeforeCursor = textarea.value.substring(0, cursorPos);
         
         console.log('Cursor position:', cursorPos);
@@ -429,16 +430,30 @@ class NotesApp {
     }
 
     renderFormattedContent() {
-        // Single source of truth: textarea stores Markdown; formatted view renders it and is editable
-        const markdown = this.noteContent.value || '';
-        if (markdown.trim()) {
-            this.markdownRenderer.renderMarkdown(markdown, this.noteContentFormatted);
+        const content = this.noteContent.value;
+        if (content.trim()) {
+            console.log('Original content for rendering:', content);
+            
+            // Ensure the element exists before rendering
+            if (!this.noteContentFormatted) {
+                console.error('noteContentFormatted element not found, reinitializing...');
+                this.noteContentFormatted = document.getElementById('noteContentFormatted');
+            }
+            
+            // Always convert to HTML for proper formatting
+            console.log('Converting to HTML with markdown support');
+            this.renderAsHTML(content);
+            
+            console.log('Raw content being rendered:', JSON.stringify(content));
+            console.log('Content character codes:', Array.from(content).map(c => c.charCodeAt(0)));
+            
         } else {
-            this.noteContentFormatted.innerHTML = '';
+            if (this.noteContentFormatted) {
+                this.noteContentFormatted.textContent = '';
+            }
         }
     }
 
-    // Deprecated HTML renderer retained as fallback but unused
     renderAsHTML(content) {
         // First, convert markdown-style formatting to HTML
         let processedContent = this.convertMarkdownToHTML(content);
@@ -506,43 +521,6 @@ class NotesApp {
         return converted;
     }
 
-    handleKeyDownOnFormatted(e) {
-        if (e.key === 'Enter') {
-            const now = Date.now();
-            const elapsed = now - this.lastEnterTime;
-            if (elapsed < 800 && elapsed > 50) {
-                e.preventDefault();
-                // Sync and improve
-                this.commitFormattedToMarkdownAndRender();
-                this.improveTextWithAI();
-                this.lastEnterTime = 0;
-                return;
-            }
-            this.lastEnterTime = now;
-        }
-    }
-
-    commitFormattedToMarkdownAndRender() {
-        this.syncFormattedToMarkdown();
-        this.renderFormattedContent();
-        // Place caret at end to avoid caret jumping to start
-        this.placeCaretAtEnd(this.noteContentFormatted);
-    }
-
-    placeCaretAtEnd(el) {
-        try {
-            el.focus();
-            if (typeof window.getSelection != 'undefined' && typeof document.createRange != 'undefined') {
-                const range = document.createRange();
-                range.selectNodeContents(el);
-                range.collapse(false);
-                const sel = window.getSelection();
-                sel.removeAllRanges();
-                sel.addRange(range);
-            }
-        } catch(_) {}
-    }
-
     renderWithShowdownFallback(content) {
         try {
             if (this.markdownConverter && this.noteContentFormatted) {
@@ -591,34 +569,40 @@ class NotesApp {
         return processed;
     }
 
-    // Keep textarea markdown in sync with the editable formatted surface
-    syncFormattedToMarkdown() {
-        try {
-            const turndownService = new TurndownService({
-                headingStyle: 'atx',
-                bulletListMarker: '-',
-                codeBlockStyle: 'fenced'
-            });
-            // Get sanitized HTML from the editable container
-            const html = this.noteContentFormatted.innerHTML;
-            const markdown = turndownService.turndown(html)
-                .replace(/\n{3,}/g, '\n\n')
-                .replace(/[ \t]+$/gm, '');
-            this.noteContent.value = markdown;
-            // Re-render to normalize (keeps a consistent look)
-            this.renderFormattedContent();
-        } catch (e) {
-            console.error('Turndown conversion failed:', e);
+    convertFormattedToPlainText() {
+        // Convert HTML back to clean text for editing
+        if (this.noteContentFormatted && this.noteContentFormatted.innerHTML.trim()) {
+            // Get the text content and clean it up
+            let plainText = this.noteContentFormatted.textContent || this.noteContentFormatted.innerText;
+            
+            // Clean up extra whitespace while preserving structure
+            plainText = plainText
+                .replace(/\n\s*\n\s*\n/g, '\n\n')  // Reduce excessive line breaks
+                .replace(/^\s+|\s+$/g, '')          // Trim
+                .replace(/[ \t]+$/gm, '');          // Remove trailing spaces
+            
+            this.noteContent.value = plainText;
+            console.log('Converted HTML content to editable text:', plainText);
         }
     }
 
-    // No-op in single-surface mode
-    convertFormattedToPlainText() {}
+    showPlainTextView() {
+        this.noteContent.style.display = 'block';
+        this.noteContentFormatted.style.display = 'none';
+    }
 
-    // Deprecated view toggles removed for single-surface editing
-    showPlainTextView() {}
-    showFormattedView() { this.renderFormattedContent(); }
-    maybeShowFormattedView() { this.renderFormattedContent(); }
+    showFormattedView() {
+        this.renderFormattedContent();
+        this.noteContent.style.display = 'none';
+        this.noteContentFormatted.style.display = 'block';
+    }
+
+    maybeShowFormattedView() {
+        // Only show formatted view if not actively editing
+        if (document.activeElement !== this.noteContent) {
+            this.showFormattedView();
+        }
+    }
 
  
 }
