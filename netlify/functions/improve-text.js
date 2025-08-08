@@ -76,14 +76,21 @@ exports.handler = async (event, context) => {
         }
 
         // Create the prompt for Gemini
-        const prompt = `Improve this student note by making it clearer, fixing errors, adding any relevant information, and organizing it better. Use proper spacing, newlines, and indentation to make it easy to read.
+        const prompt = `Improve this student note by making it clearer, fixing errors, and organizing it better. Use proper spacing, newlines, and indentation to make it easy to read.
 
 CRITICAL FORMATTING RULES:
 - Put titles on their own lines
 - Add blank lines between sections
+- Include bullet points whenever possible
 - Use proper indentation for bullet points
 - Include newlines after each bullet point
 - Group related information with proper spacing
+- Make text bold and italic and underlined when appropriate to make it more readable
+
+IMPROVEMENT RULES:
+- Add more information if text includes text similar to "missing information"
+- Always try to add more information on areas lacking
+- Finish unfinished sentences
 
 Example input: "cpu central processing unit components alu performs math pc program counter holds address"
 
