@@ -243,27 +243,32 @@ body {
 }
 
 .note-content-formatted p {
-    margin: 0.75em 0;
-    text-align: left;
-    line-height: 1.6;
+    display: block !important;
+    margin: 1em 0 !important;
+    padding: 0 !important;
+    line-height: 1.6 !important;
+    text-align: left !important;
 }
 
 .note-content-formatted p:first-child {
-    margin-top: 0;
+    margin-top: 0 !important;
 }
 
 .note-content-formatted p:last-child {
-    margin-bottom: 0;
+    margin-bottom: 0 !important;
 }
 
 .note-content-formatted ul {
-    margin: 0.75em 0;
-    padding-left: 1.5em;
+    display: block !important;
+    margin: 1em 0 !important;
+    padding-left: 2em !important;
+    list-style-type: disc !important;
 }
 
 .note-content-formatted li {
-    margin: 0.25em 0;
-    line-height: 1.5;
+    display: list-item !important;
+    margin: 0.5em 0 !important;
+    line-height: 1.5 !important;
 }
 
 .note-content-formatted h1,

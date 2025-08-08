@@ -76,40 +76,33 @@ exports.handler = async (event, context) => {
         }
 
         // Create the prompt for Gemini
-        const prompt = `Take this student note and organize it into a clear, structured format. 
+        const prompt = `Improve this student note by making it clearer, fixing errors, adding any relevant information, and organizing it better. Use proper spacing, newlines, and indentation to make it easy to read.
 
-FORMAT REQUIREMENTS:
-- Start each major topic on a new line
-- Put a blank line before each new section
-- Use • for bullet points
-- Put each bullet point on its own line
+CRITICAL FORMATTING RULES:
+- Put titles on their own lines
+- Add blank lines between sections
+- Use proper indentation for bullet points
+- Include newlines after each bullet point
+- Group related information with proper spacing
 
-EXAMPLE:
-Input: "cpu processes data alu does math pc holds addresses"
-Output: "The Central Processing Unit (CPU), or the brain of the computer, is responsible for executing instructions. It relies on several key components working in unison.
+Example input: "cpu central processing unit components alu performs math pc program counter holds address"
 
-Arithmetic Logic Unit (ALU): The calculator of the CPU. It performs all mathematical calculations (addition, subtraction) and logical operations (AND, OR, NOT).
+Example output:
+CPU (Central Processing Unit) Components
 
-Program Counter (PC): A pointer that holds the memory address of the next instruction to be executed. It ensures the CPU knows what to do next.
+ALU (Arithmetic Logic Unit)
+    • Performs mathematical and logical operations
+    • Essential for calculations and comparisons
 
-Memory Address Register (MAR): Holds the memory address of the data or instruction that is about to be fetched from or written to memory. It's like the address you write on an envelope.
+PC (Program Counter)
+    • Holds the address of the next instruction
+    • Different from a personal computer
 
-Memory Data Register (MDR): A two-way register that holds data fetched from memory (on its way to the CPU) or data waiting to be stored in memory. It's like the letter inside the envelope.
-
-Control Unit (CU): The traffic cop of the CPU. It directs the flow of data between the CPU and other devices and interprets instructions to tell the other components, like the ALU, what to do.
-
-The Instruction Cycle 
-The CPU executes programs by continuously cycling through three fundamental steps. This is known as the Fetch-Decode-Execute cycle.
-
-Fetch: The Control Unit gets the instruction from the memory address currently stored in the Program Counter (PC). This instruction is then placed into the Memory Data Register (MDR).
-
-Decode: The Control Unit interprets the instruction it just fetched. It figures out what operation needs to be performed and what data is needed.
-
-Execute: The Control Unit sends signals to the relevant CPU components to carry out the instruction. This might involve the ALU performing a calculation or data being moved between registers. Once complete, the cycle begins again with the next instruction.
+IMPORTANT: Use actual newlines (\\n) and spaces for indentation. Make sure there are blank lines between sections.
 
 Original text: "${text}"
 
-Improved and formatted version:`;
+Improved version:`;
 
         console.log('Making request to Gemini API...');
 

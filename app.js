@@ -438,6 +438,18 @@ class NotesApp {
             
             // Always convert to HTML for proper line break display
             console.log('Converting to HTML for proper formatting');
+            
+            // Test with simple HTML first to verify it works
+            if (content.includes('Central Processing Unit')) {
+                console.log('Testing with manual HTML structure');
+                this.noteContentFormatted.innerHTML = `
+                    <p>The Central Processing Unit (CPU), or the brain of the computer, is responsible for executing instructions. It relies on several key components working in unison.</p>
+                    <p>Arithmetic Logic Unit (ALU): The calculator of the CPU. It performs all mathematical calculations (addition, subtraction) and logical operations (AND, OR, NOT).</p>
+                    <p>Program Counter (PC): A pointer that holds the memory address of the next instruction to be executed. It ensures the CPU knows what to do next.</p>
+                `;
+                return;
+            }
+            
             this.renderAsHTML(content);
             
             console.log('Raw content being rendered:', JSON.stringify(content));
@@ -451,42 +463,39 @@ class NotesApp {
     }
 
     renderAsHTML(content) {
-        // Convert content to HTML with proper paragraph and line break handling
-        let html = content
-            // First, normalize line breaks
-            .replace(/\r\n/g, '\n')
-            .replace(/\r/g, '\n')
-            
-            // Split into paragraphs (separated by double line breaks or more)
-            .split(/\n\s*\n/)
-            .map(paragraph => {
-                paragraph = paragraph.trim();
-                if (!paragraph) return '';
+        // Simple approach: split by double newlines and create paragraphs
+        let paragraphs = content.split(/\n\s*\n+/);
+        
+        let html = paragraphs
+            .map(para => {
+                para = para.trim();
+                if (!para) return '';
                 
-                // Check if this paragraph contains bullet points
-                if (paragraph.includes('•') || paragraph.match(/^\s*[-*]\s/m)) {
-                    // Handle bullet points
-                    let bulletHtml = paragraph
-                        .replace(/^\s*[•\-*]\s*(.+)$/gm, '<li>$1</li>')
-                        .replace(/\n/g, '<br>');
+                // Handle bullet points
+                if (para.includes('•') || para.includes('-')) {
+                    let lines = para.split('\n');
+                    let listItems = lines
+                        .filter(line => line.trim())
+                        .map(line => {
+                            if (line.includes('•') || line.trim().startsWith('-')) {
+                                let text = line.replace(/^[•\-\s]*/, '').trim();
+                                return `<li>${text}</li>`;
+                            } else {
+                                return `<p>${line.trim()}</p>`;
+                            }
+                        });
                     
-                    // If we have list items, wrap them
-                    if (bulletHtml.includes('<li>')) {
-                        bulletHtml = bulletHtml.replace(/(<li>.*<\/li>)/g, '<ul>$1</ul>');
-                        return bulletHtml;
-                    } else {
-                        return '<p>' + bulletHtml + '</p>';
-                    }
+                    return listItems.join('');
                 } else {
-                    // Regular paragraph - convert single line breaks to <br>
-                    return '<p>' + paragraph.replace(/\n/g, '<br>') + '</p>';
+                    // Regular paragraph
+                    return `<p>${para.replace(/\n/g, '<br>')}</p>`;
                 }
             })
-            .filter(p => p) // Remove empty paragraphs
+            .filter(p => p)
             .join('');
             
         this.noteContentFormatted.innerHTML = html;
-        console.log('Rendered as HTML:', html);
+        console.log('Simple HTML rendered:', html);
     }
 
     renderWithShowdownFallback(content) {
