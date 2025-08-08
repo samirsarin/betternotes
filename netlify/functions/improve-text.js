@@ -76,33 +76,30 @@ exports.handler = async (event, context) => {
         }
 
         // Create the prompt for Gemini
-        const prompt = `Improve this student note by making it clearer, fixing errors, and organizing it better. Use proper spacing, newlines, and indentation to make it easy to read.
+        const prompt = `Improve this student note by making it clearer, fixing errors, adding any relevant information and organizing it better.
 
-CRITICAL FORMATTING RULES:
-- Put titles on their own lines
-- Add blank lines between sections
-- Use proper indentation for bullet points
-- Include newlines after each bullet point
-- Group related information with proper spacing
+CRITICAL: Your response must have proper line breaks and spacing. Use this EXACT format:
 
-Example input: "cpu central processing unit components alu performs math pc program counter holds address"
+Title
 
-Example output:
-CPU (Central Processing Unit) Components
+Subtitle
+    • First bullet point
+    • Second bullet point
 
-ALU (Arithmetic Logic Unit)
-    • Performs mathematical and logical operations
-    • Essential for calculations and comparisons
+Another Subtitle  
+    • More bullet points
+    • With proper spacing
 
-PC (Program Counter)
-    • Holds the address of the next instruction
-    • Different from a personal computer
-
-IMPORTANT: Use actual newlines (\\n) and spaces for indentation. Make sure there are blank lines between sections.
+RULES:
+1. Put TWO line breaks after titles
+2. Put TWO line breaks between sections
+3. Use 4 spaces before bullet points
+4. Put ONE line break after each bullet point
+5. Use • symbol for bullets
 
 Original text: "${text}"
 
-Improved version:`;
+Your improved version (follow the format exactly):`;
 
         console.log('Making request to Gemini API...');
 
@@ -235,10 +232,17 @@ Improved version:`;
         }
 
         // Clean up the response while preserving formatting
+        console.log('Raw AI response before cleaning:', JSON.stringify(generatedText));
+        
         generatedText = generatedText
             .trim()
             .replace(/\n{4,}/g, '\n\n\n')   // Limit excessive line breaks but allow some spacing
             .replace(/[ \t]+$/gm, '');      // Remove trailing spaces but preserve line structure
+            
+        console.log('Cleaned AI response:', JSON.stringify(generatedText));
+        
+        // Force proper formatting if AI didn't follow rules
+        generatedText = forceProperFormatting(generatedText);
 
         return {
             statusCode: 200,
@@ -270,6 +274,57 @@ Improved version:`;
                 };
     }
 };
+
+// Function to force proper formatting on AI response
+function forceProperFormatting(text) {
+    console.log('Forcing proper formatting on:', JSON.stringify(text));
+    
+    let formatted = text;
+    
+    // Split into lines and process
+    let lines = formatted.split('\n');
+    let result = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
+        
+        if (!line) {
+            // Keep empty lines for spacing
+            result.push('');
+            continue;
+        }
+        
+        // Check if this looks like a title (no bullet, substantial text)
+        if (!line.startsWith('•') && !line.startsWith('-') && !line.startsWith('    ') && line.length > 3) {
+            // Add spacing before titles (except first line)
+            if (result.length > 0 && result[result.length - 1] !== '') {
+                result.push('');
+            }
+            result.push(line);
+            result.push(''); // Add spacing after titles
+        }
+        // Check if this looks like a bullet point
+        else if (line.startsWith('•') || line.startsWith('-')) {
+            // Ensure proper indentation for bullets
+            let bulletText = line.replace(/^[•\-]\s*/, '');
+            result.push('    • ' + bulletText);
+        }
+        // Check if this is already indented content
+        else if (line.startsWith('    ')) {
+            result.push(line);
+        }
+        // Regular text
+        else {
+            result.push(line);
+        }
+    }
+    
+    // Join back and clean up excessive spacing
+    formatted = result.join('\n').replace(/\n{4,}/g, '\n\n\n');
+    
+    console.log('After forcing format:', JSON.stringify(formatted));
+    return formatted;
+}
 
 // Function to completely restructure markdown by parsing and rebuilding
 function fixMarkdownFormatting(text) {

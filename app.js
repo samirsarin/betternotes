@@ -440,6 +440,8 @@ class NotesApp {
             // The CSS will preserve all the AI's formatting, newlines, and indentation
             this.noteContentFormatted.textContent = content;
             console.log('Rendered content with preserved formatting');
+            console.log('Raw content being rendered:', JSON.stringify(content));
+            console.log('Content character codes:', Array.from(content).map(c => c.charCodeAt(0)));
             
         } else {
             if (this.noteContentFormatted) {
