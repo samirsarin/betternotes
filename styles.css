@@ -240,6 +240,12 @@ body {
     background: transparent;
     overflow-y: auto;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    outline: none;
+}
+
+.note-content-formatted[contenteditable="true"]:focus {
+    border: none;
+    outline: none;
 }
 
 .note-content-formatted p {
