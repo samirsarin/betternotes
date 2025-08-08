@@ -27,31 +27,143 @@ class NotesApp {
     }
 
         initializeTipTapEditor() {
-        // Create TipTap editor with custom AI extension
-        this.editor = new Tiptap.Editor({
-            element: this.tiptapContainer,
-            extensions: [
-                Tiptap.StarterKit.configure({
-                    heading: {
-                        levels: [1, 2, 3],
-                    },
-                }),
-                Tiptap.Typography,
-                Tiptap.Placeholder.configure({
-                    placeholder: 'Start typing your note... (Double-tap Enter to improve with AI)',
-                }),
-                window.DoubleEnterAI.configure({
-                    onDoubleEnter: (editor) => this.handleDoubleEnterAI(editor),
-                }),
-            ],
-            content: '',
-            onUpdate: ({ editor }) => {
-                // Auto-save on typing (with debounce)
-                this.scheduleAutoSave();
-                // Update hidden textarea for compatibility
-                this.noteContent.value = editor.getHTML();
-            },
+        console.log('Initializing rich text editor...');
+        
+        // Set up contenteditable div with rich text features
+        this.tiptapContainer.contentEditable = true;
+        this.tiptapContainer.style.outline = 'none';
+        this.tiptapContainer.setAttribute('data-placeholder', 'Start typing your note... (Double-tap Enter to improve with AI)');
+        
+        // Add placeholder styling when empty
+        this.updatePlaceholder();
+        
+        // Add event listeners
+        this.tiptapContainer.addEventListener('input', () => {
+            this.updatePlaceholder();
+            this.scheduleAutoSave();
+            this.noteContent.value = this.tiptapContainer.innerHTML;
         });
+        
+        this.tiptapContainer.addEventListener('focus', () => {
+            this.updatePlaceholder();
+        });
+        
+        this.tiptapContainer.addEventListener('blur', () => {
+            this.updatePlaceholder();
+        });
+        
+        // Add double-enter detection for AI improvement
+        this.addDoubleEnterDetection();
+        
+        // Add keyboard shortcuts for formatting
+        this.addKeyboardShortcuts();
+        
+        console.log('Rich text editor initialized successfully');
+    }
+    
+    updatePlaceholder() {
+        const isEmpty = !this.tiptapContainer.textContent.trim();
+        this.tiptapContainer.classList.toggle('is-empty', isEmpty);
+    }
+    
+    addDoubleEnterDetection() {
+        let lastEnterTime = 0;
+        
+        this.tiptapContainer.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const now = Date.now();
+                const timeDiff = now - lastEnterTime;
+                
+                console.log('Enter pressed. Time diff:', timeDiff, 'ms');
+                
+                // Double-tap detection (within 800ms but more than 50ms to avoid accidental)
+                if (timeDiff < 800 && timeDiff > 50) {
+                    console.log('Double Enter detected! Triggering AI improvement...');
+                    e.preventDefault();
+                    this.handleDoubleEnterAI();
+                    lastEnterTime = 0;
+                    return;
+                }
+                
+                lastEnterTime = now;
+            }
+        });
+    }
+    
+    addKeyboardShortcuts() {
+        this.tiptapContainer.addEventListener('keydown', (e) => {
+            // Bold: Ctrl/Cmd + B
+            if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+                e.preventDefault();
+                document.execCommand('bold');
+            }
+            
+            // Italic: Ctrl/Cmd + I
+            if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+                e.preventDefault();
+                document.execCommand('italic');
+            }
+            
+            // Underline: Ctrl/Cmd + U
+            if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+                e.preventDefault();
+                document.execCommand('underline');
+            }
+        });
+    }
+
+    initializeFallbackEditor() {
+        console.log('Initializing fallback editor...');
+        this.tiptapContainer.contentEditable = true;
+        this.tiptapContainer.style.outline = 'none';
+        this.tiptapContainer.setAttribute('data-placeholder', 'Start typing your note... (Double-tap Enter to improve with AI)');
+        
+        // Add basic event listeners
+        this.tiptapContainer.addEventListener('input', () => {
+            this.scheduleAutoSave();
+            this.noteContent.value = this.tiptapContainer.innerHTML;
+        });
+        
+        // Add double-enter detection
+        let lastEnterTime = 0;
+        this.tiptapContainer.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const now = Date.now();
+                const timeDiff = now - lastEnterTime;
+                
+                if (timeDiff < 800 && timeDiff > 50) {
+                    e.preventDefault();
+                    this.handleDoubleEnterFallback();
+                }
+                lastEnterTime = now;
+            }
+        });
+    }
+    
+    async handleDoubleEnterFallback() {
+        const content = this.tiptapContainer.textContent || '';
+        if (!content.trim()) return;
+        
+        try {
+            this.showSaveStatus('🤖 AI is improving your text...', 'loading');
+            const response = await this.aiService.improveText(content);
+            const improvedText = response.generated_text || response.improvedText;
+            
+            if (improvedText && improvedText.trim()) {
+                this.tiptapContainer.innerHTML = `<p>${improvedText.replace(/\n/g, '</p><p>')}</p>`;
+                this.noteContent.value = this.tiptapContainer.innerHTML;
+                
+                if (this.currentNoteId) {
+                    await this.saveCurrentNote(true);
+                }
+                
+                this.showSaveStatus('✨ Text improved by AI!', 'success');
+                setTimeout(() => this.showSaveStatus(''), 3000);
+            }
+        } catch (error) {
+            console.error('AI improvement failed:', error);
+            this.showSaveStatus('AI improvement failed', 'error');
+        }
     }
 
     attachEventListeners() {
@@ -164,7 +276,7 @@ class NotesApp {
         if (!this.currentNoteId) return;
 
         const title = this.noteTitle.value.trim() || 'Untitled Note';
-        const content = this.noteContent.value;
+        const content = this.tiptapContainer.innerHTML;
 
         try {
             if (!isAutoSave) {
@@ -206,13 +318,14 @@ class NotesApp {
         this.currentNoteId = noteId;
         this.noteTitle.value = note.title;
         
-        // Set content in TipTap editor
-        if (this.editor) {
-            this.editor.commands.setContent(note.content || '');
-        }
+        // Set content in the rich text editor
+        this.tiptapContainer.innerHTML = note.content || '';
         
         // Update hidden textarea for compatibility
         this.noteContent.value = note.content || '';
+        
+        // Update placeholder state
+        this.updatePlaceholder();
         
         this.showEditor();
         this.updateActiveNote();
@@ -321,8 +434,8 @@ class NotesApp {
         }
     }
 
-    async handleDoubleEnterAI(editor) {
-        console.log('=== TipTap AI Improvement Started ===');
+    async handleDoubleEnterAI() {
+        console.log('=== AI Improvement Started ===');
         
         if (!this.aiService.isAvailable()) {
             console.log('AI service not available');
@@ -331,7 +444,7 @@ class NotesApp {
         }
 
         // Get the current content from the editor
-        const currentContent = editor.getText();
+        const currentContent = this.tiptapContainer.textContent || '';
         
         console.log('Current editor content:', currentContent);
 
@@ -354,11 +467,15 @@ class NotesApp {
             if (improvedText && improvedText.trim()) {
                 console.log('AI improvement successful. Replacing content...');
                 
-                // Replace the entire content with improved version
-                editor.commands.setContent(improvedText);
+                // Convert improved markdown text to HTML and replace content
+                const htmlContent = this.convertMarkdownToHTML(improvedText);
+                this.tiptapContainer.innerHTML = htmlContent;
                 
                 // Update hidden textarea for compatibility
-                this.noteContent.value = improvedText;
+                this.noteContent.value = htmlContent;
+                
+                // Update placeholder state
+                this.updatePlaceholder();
                 
                 // Auto-save the improved note
                 if (this.currentNoteId) {
@@ -387,6 +504,34 @@ class NotesApp {
                 this.showSaveStatus(`AI error: ${error.message}`, 'error');
             }
         }
+    }
+
+    convertMarkdownToHTML(text) {
+        // Convert markdown-style formatting to HTML
+        return text
+            // Headers
+            .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+            .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+            .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+            // Bold and italic combinations
+            .replace(/\*\*\*_(.+?)_\*\*\*/g, '<strong><u>$1</u></strong>')
+            .replace(/\*\*\*(.+?)\*\*\*/g, '<strong>$1</strong>')
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/_(.+?)_/g, '<em>$1</em>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            // Convert bullet points to HTML lists
+            .replace(/^\s*[-•]\s+(.+)$/gm, '<li>$1</li>')
+            // Wrap consecutive <li> tags in <ul>
+            .replace(/(<li>.*<\/li>(?:\s*<li>.*<\/li>)*)/gs, '<ul>$1</ul>')
+            // Convert double newlines to paragraph breaks
+            .replace(/\n\n/g, '</p><p>')
+            // Wrap everything in paragraphs if not already wrapped
+            .replace(/^(?!<[hul])/gm, '<p>')
+            .replace(/(?<!>)$/gm, '</p>')
+            // Clean up empty paragraphs and fix formatting
+            .replace(/<p><\/p>/g, '')
+            .replace(/<p>(<[hul])/g, '$1')
+            .replace(/(<\/[hul]>)<\/p>/g, '$1');
     }
 
     // Keep old method for compatibility

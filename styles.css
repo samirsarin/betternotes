@@ -235,12 +235,13 @@ body {
     margin: 0;
 }
 
-.tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
+.tiptap-editor.is-empty::before {
     content: "Start typing your note... (Double-tap Enter to improve with AI)";
     color: #9ca3af;
     pointer-events: none;
-    height: 0;
-    float: left;
+    position: absolute;
+    top: 1rem;
+    left: 0;
 }
 
 /* TipTap Content Styling - College-Level Notes */
