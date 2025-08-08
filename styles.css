@@ -271,6 +271,27 @@ body {
     line-height: 1.5 !important;
 }
 
+.note-content-formatted strong {
+    font-weight: bold !important;
+    color: #1e293b !important;
+}
+
+.note-content-formatted em {
+    font-style: italic !important;
+    color: #374151 !important;
+}
+
+.note-content-formatted u {
+    text-decoration: underline !important;
+    color: #1e293b !important;
+}
+
+.note-content-formatted strong u {
+    font-weight: bold !important;
+    text-decoration: underline !important;
+    color: #0f172a !important;
+}
+
 .note-content-formatted h1,
 .note-content-formatted h2,
 .note-content-formatted h3 {

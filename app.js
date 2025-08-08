@@ -440,20 +440,8 @@ class NotesApp {
                 this.noteContentFormatted = document.getElementById('noteContentFormatted');
             }
             
-            // Always convert to HTML for proper line break display
-            console.log('Converting to HTML for proper formatting');
-            
-            // Test with simple HTML first to verify it works
-            if (content.includes('Central Processing Unit')) {
-                console.log('Testing with manual HTML structure');
-                this.noteContentFormatted.innerHTML = `
-                    <p>The Central Processing Unit (CPU), or the brain of the computer, is responsible for executing instructions. It relies on several key components working in unison.</p>
-                    <p>Arithmetic Logic Unit (ALU): The calculator of the CPU. It performs all mathematical calculations (addition, subtraction) and logical operations (AND, OR, NOT).</p>
-                    <p>Program Counter (PC): A pointer that holds the memory address of the next instruction to be executed. It ensures the CPU knows what to do next.</p>
-                `;
-                return;
-            }
-            
+            // Always convert to HTML for proper formatting
+            console.log('Converting to HTML with markdown support');
             this.renderAsHTML(content);
             
             console.log('Raw content being rendered:', JSON.stringify(content));
@@ -467,8 +455,11 @@ class NotesApp {
     }
 
     renderAsHTML(content) {
-        // Simple approach: split by double newlines and create paragraphs
-        let paragraphs = content.split(/\n\s*\n+/);
+        // First, convert markdown-style formatting to HTML
+        let processedContent = this.convertMarkdownToHTML(content);
+        
+        // Split by double newlines and create paragraphs
+        let paragraphs = processedContent.split(/\n\s*\n+/);
         
         let html = paragraphs
             .map(para => {
@@ -476,20 +467,20 @@ class NotesApp {
                 if (!para) return '';
                 
                 // Handle bullet points
-                if (para.includes('•') || para.includes('-')) {
+                if (para.includes('•') || para.includes('*') && para.includes('</')) {
                     let lines = para.split('\n');
                     let listItems = lines
                         .filter(line => line.trim())
                         .map(line => {
-                            if (line.includes('•') || line.trim().startsWith('-')) {
-                                let text = line.replace(/^[•\-\s]*/, '').trim();
+                            if (line.includes('•') || line.trim().startsWith('*')) {
+                                let text = line.replace(/^[•\*\s]*/, '').trim();
                                 return `<li>${text}</li>`;
                             } else {
                                 return `<p>${line.trim()}</p>`;
                             }
                         });
                     
-                    return listItems.join('');
+                    return `<ul>${listItems.join('')}</ul>`;
                 } else {
                     // Regular paragraph
                     return `<p>${para.replace(/\n/g, '<br>')}</p>`;
@@ -499,7 +490,35 @@ class NotesApp {
             .join('');
             
         this.noteContentFormatted.innerHTML = html;
-        console.log('Simple HTML rendered:', html);
+        console.log('Formatted HTML rendered:', html);
+    }
+    
+    convertMarkdownToHTML(text) {
+        console.log('Converting markdown:', text);
+        
+        let converted = text
+            // Handle complex nested formatting first
+            // ***_text_*** -> bold + underline
+            .replace(/\*\*\*_([^_*]+)_\*\*\*/g, '<strong><u>$1</u></strong>')
+            
+            // ***text*** -> bold
+            .replace(/\*\*\*([^*_]+)\*\*\*/g, '<strong>$1</strong>')
+            
+            // **text** -> bold
+            .replace(/\*\*([^*_]+)\*\*\*/g, '<strong>$1</strong>')
+            
+            // _text_ -> italic/emphasis
+            .replace(/_([^_*]+)_/g, '<em>$1</em>')
+            
+            // Single * for lists (preserve these)
+            .replace(/^\s*\*\s+/gm, '• ')
+            
+            // Clean up remaining asterisks that aren't formatting
+            .replace(/\*+([^*<>]*)\*+/g, '<strong>$1</strong>')
+            .replace(/\*{3,}/g, '');
+            
+        console.log('Converted to:', converted);
+        return converted;
     }
 
     renderWithShowdownFallback(content) {
