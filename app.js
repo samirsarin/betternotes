@@ -77,6 +77,7 @@ class NotesApp {
         
         // Single-surface editing: handle input on the formatted container
         this.noteContentFormatted.addEventListener('input', () => this.syncFormattedToMarkdown());
+        this.noteContentFormatted.addEventListener('blur', () => this.commitFormattedToMarkdownAndRender());
         this.noteContentFormatted.addEventListener('keydown', (e) => this.handleKeyDownOnFormatted(e));
     }
 
@@ -334,8 +335,11 @@ class NotesApp {
             return;
         }
 
+        // Ensure backing markdown is current with the visible editor
+        this.syncFormattedToMarkdown();
         const textarea = this.noteContent;
-        const cursorPos = textarea.selectionStart;
+        // If selection data is unavailable in hidden textarea, use end
+        const cursorPos = typeof textarea.selectionStart === 'number' ? textarea.selectionStart : textarea.value.length;
         const textBeforeCursor = textarea.value.substring(0, cursorPos);
         
         console.log('Cursor position:', cursorPos);
@@ -505,16 +509,38 @@ class NotesApp {
     handleKeyDownOnFormatted(e) {
         if (e.key === 'Enter') {
             const now = Date.now();
-            if (now - this.lastEnterTime < 800) {
+            const elapsed = now - this.lastEnterTime;
+            if (elapsed < 800 && elapsed > 50) {
                 e.preventDefault();
-                // Sync HTML -> Markdown, then improve
-                this.syncFormattedToMarkdown();
+                // Sync and improve
+                this.commitFormattedToMarkdownAndRender();
                 this.improveTextWithAI();
                 this.lastEnterTime = 0;
                 return;
             }
             this.lastEnterTime = now;
         }
+    }
+
+    commitFormattedToMarkdownAndRender() {
+        this.syncFormattedToMarkdown();
+        this.renderFormattedContent();
+        // Place caret at end to avoid caret jumping to start
+        this.placeCaretAtEnd(this.noteContentFormatted);
+    }
+
+    placeCaretAtEnd(el) {
+        try {
+            el.focus();
+            if (typeof window.getSelection != 'undefined' && typeof document.createRange != 'undefined') {
+                const range = document.createRange();
+                range.selectNodeContents(el);
+                range.collapse(false);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+        } catch(_) {}
     }
 
     renderWithShowdownFallback(content) {
