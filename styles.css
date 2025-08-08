@@ -212,6 +212,11 @@ body {
     position: relative;
 }
 
+.note-content-formatted[contenteditable="true"]:empty:before {
+    content: attr(data-placeholder);
+    color: #9ca3af;
+}
+
 .note-content {
     flex: 1;
     width: 100%;
