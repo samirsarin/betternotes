@@ -4,31 +4,7 @@ class NotesApp {
         this.currentNoteId = null;
         this.notes = [];
         this.aiService = new AIService();
-        this.lastEnterTime = 0;
-        
-        // Initialize enhanced markdown renderer (primary)
-        try {
-            this.markdownRenderer = new MarkdownRenderer();
-            console.log('MarkdownRenderer initialized successfully');
-        } catch (error) {
-            console.error('Failed to initialize MarkdownRenderer:', error);
-            this.markdownRenderer = null;
-        }
-        
-        // Keep Showdown as backup (for backward compatibility)
-        this.markdownConverter = new showdown.Converter({
-            headerLevelStart: 1,
-            simplifiedAutoLink: true,
-            strikethrough: true,
-            tables: true,
-            tasklists: true,
-            smartIndentationFix: true,
-            simpleLineBreaks: true,
-            openLinksInNewWindow: true,
-            breaks: true,
-            ghCodeBlocks: true,
-            smoothLivePreview: true
-        });
+        this.editor = null; // TipTap editor instance
         this.initializeElements();
         this.attachEventListeners();
         this.loadNotes();
@@ -39,12 +15,43 @@ class NotesApp {
         this.deleteNoteBtn = document.getElementById('deleteNoteBtn');
         this.saveNoteBtn = document.getElementById('saveNoteBtn');
         this.noteTitle = document.getElementById('noteTitle');
-        this.noteContent = document.getElementById('noteContent');
-        this.noteContentFormatted = document.getElementById('noteContentFormatted');
+        this.noteContent = document.getElementById('noteContent'); // Hidden, for compatibility
+        this.tiptapContainer = document.getElementById('tiptap-editor');
         this.notesList = document.getElementById('notesList');
         this.editorArea = document.getElementById('editorArea');
         this.welcomeMessage = document.getElementById('welcomeMessage');
         this.saveStatus = document.getElementById('saveStatus');
+        
+        // Initialize TipTap Editor
+        this.initializeTipTapEditor();
+    }
+
+        initializeTipTapEditor() {
+        // Create TipTap editor with custom AI extension
+        this.editor = new Tiptap.Editor({
+            element: this.tiptapContainer,
+            extensions: [
+                Tiptap.StarterKit.configure({
+                    heading: {
+                        levels: [1, 2, 3],
+                    },
+                }),
+                Tiptap.Typography,
+                Tiptap.Placeholder.configure({
+                    placeholder: 'Start typing your note... (Double-tap Enter to improve with AI)',
+                }),
+                window.DoubleEnterAI.configure({
+                    onDoubleEnter: (editor) => this.handleDoubleEnterAI(editor),
+                }),
+            ],
+            content: '',
+            onUpdate: ({ editor }) => {
+                // Auto-save on typing (with debounce)
+                this.scheduleAutoSave();
+                // Update hidden textarea for compatibility
+                this.noteContent.value = editor.getHTML();
+            },
+        });
     }
 
     attachEventListeners() {
@@ -52,36 +59,17 @@ class NotesApp {
         this.deleteNoteBtn.addEventListener('click', () => this.deleteCurrentNote());
         this.saveNoteBtn.addEventListener('click', () => this.saveCurrentNote());
         
-        // Auto-save on typing (with debounce)
-        let saveTimeout;
-        const autoSave = () => {
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                if (this.currentNoteId) {
-                    this.saveCurrentNote(true);
-                }
-            }, 1000);
-        };
-        
-        this.noteTitle.addEventListener('input', autoSave);
-        this.noteContent.addEventListener('input', autoSave);
-        
-        // AI improvement on double Enter
-        this.noteContent.addEventListener('keydown', (e) => this.handleKeyDown(e));
-        
-                 // Keep consistent formatting - show formatted view when not editing
-         this.noteContent.addEventListener('focus', () => this.showPlainTextView());
-         this.noteContent.addEventListener('blur', () => {
-             // Always show formatted view for consistency
-             setTimeout(() => this.showFormattedView(), 100);
-         });
-         
-                   // Click on formatted view shows plaintext for editing
-          this.noteContentFormatted.addEventListener('click', () => {
-              this.convertFormattedToPlainText();
-              this.showPlainTextView();
-              this.noteContent.focus();
-          });
+        // Auto-save on title change
+        this.noteTitle.addEventListener('input', () => this.scheduleAutoSave());
+    }
+
+    scheduleAutoSave() {
+        clearTimeout(this.saveTimeout);
+        this.saveTimeout = setTimeout(() => {
+            if (this.currentNoteId) {
+                this.saveCurrentNote(true);
+            }
+        }, 1000);
     }
 
     async loadNotes() {
@@ -217,11 +205,14 @@ class NotesApp {
 
         this.currentNoteId = noteId;
         this.noteTitle.value = note.title;
-        this.noteContent.value = note.content;
         
-        // Render formatted content and show formatted view
-        this.renderFormattedContent();
-        this.showFormattedView();
+        // Set content in TipTap editor
+        if (this.editor) {
+            this.editor.commands.setContent(note.content || '');
+        }
+        
+        // Update hidden textarea for compatibility
+        this.noteContent.value = note.content || '';
         
         this.showEditor();
         this.updateActiveNote();
@@ -330,6 +321,75 @@ class NotesApp {
         }
     }
 
+    async handleDoubleEnterAI(editor) {
+        console.log('=== TipTap AI Improvement Started ===');
+        
+        if (!this.aiService.isAvailable()) {
+            console.log('AI service not available');
+            this.showSaveStatus('AI is busy, please wait...', 'loading');
+            return;
+        }
+
+        // Get the current content from the editor
+        const currentContent = editor.getText();
+        
+        console.log('Current editor content:', currentContent);
+
+        if (!currentContent.trim()) {
+            console.log('No text to improve - empty content');
+            this.showSaveStatus('No text to improve', 'error');
+            return;
+        }
+
+        try {
+            this.showSaveStatus('🤖 AI is improving your text...', 'loading');
+            
+            console.log('Calling AI service with text:', currentContent);
+            const response = await this.aiService.improveText(currentContent);
+            console.log('AI service response:', response);
+            
+            const improvedText = response.generated_text || response.improvedText;
+            console.log('Improved text received:', improvedText);
+            
+            if (improvedText && improvedText.trim()) {
+                console.log('AI improvement successful. Replacing content...');
+                
+                // Replace the entire content with improved version
+                editor.commands.setContent(improvedText);
+                
+                // Update hidden textarea for compatibility
+                this.noteContent.value = improvedText;
+                
+                // Auto-save the improved note
+                if (this.currentNoteId) {
+                    console.log('Auto-saving note...');
+                    await this.saveCurrentNote(true);
+                }
+                
+                this.showSaveStatus('✨ Text improved by AI!', 'success');
+                setTimeout(() => this.showSaveStatus(''), 3000);
+            } else {
+                console.log('Empty or invalid AI response. Received:', improvedText);
+                this.showSaveStatus('AI couldn\'t improve this text', 'error');
+            }
+            
+        } catch (error) {
+            console.error('AI improvement failed:', error);
+            
+            // More specific error messages
+            if (error.message.includes('Failed to fetch')) {
+                this.showSaveStatus('Connection failed. Check internet connection.', 'error');
+            } else if (error.message.includes('403')) {
+                this.showSaveStatus('API key invalid or quota exceeded.', 'error');
+            } else if (error.message.includes('429')) {
+                this.showSaveStatus('Rate limit exceeded. Wait a moment.', 'error');
+            } else {
+                this.showSaveStatus(`AI error: ${error.message}`, 'error');
+            }
+        }
+    }
+
+    // Keep old method for compatibility
     async improveTextWithAI() {
         console.log('=== AI Improvement Started ===');
         
