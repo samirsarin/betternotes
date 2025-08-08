@@ -260,15 +260,39 @@ body {
 
 .note-content-formatted ul {
     display: block !important;
-    margin: 1em 0 !important;
-    padding-left: 2em !important;
-    list-style-type: disc !important;
+    margin: 1em 0 1.5em 0 !important;
+    padding-left: 0 !important;
+    list-style-type: none !important;
 }
 
 .note-content-formatted li {
-    display: list-item !important;
+    display: block !important;
+    margin: 0.75em 0 !important;
+    padding-left: 1.5em !important;
+    line-height: 1.6 !important;
+    position: relative;
+}
+
+.note-content-formatted li:before {
+    content: "•";
+    color: #3b82f6;
+    font-weight: bold;
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-size: 1.2em;
+}
+
+/* Nested lists */
+.note-content-formatted ul ul {
     margin: 0.5em 0 !important;
-    line-height: 1.5 !important;
+    padding-left: 1.5em !important;
+}
+
+.note-content-formatted ul ul li:before {
+    content: "◦";
+    color: #6b7280;
+    font-size: 1em;
 }
 
 .note-content-formatted strong {
@@ -292,11 +316,31 @@ body {
     color: #0f172a !important;
 }
 
-.note-content-formatted h1,
-.note-content-formatted h2,
+.note-content-formatted h1 {
+    margin: 0 0 1.5em 0;
+    padding-bottom: 0.5em;
+    border-bottom: 3px solid #3b82f6;
+    color: #1e293b;
+    font-size: 1.75em;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.note-content-formatted h2 {
+    margin: 2em 0 1em 0;
+    padding-bottom: 0.3em;
+    border-bottom: 2px solid #e5e7eb;
+    color: #374151;
+    font-size: 1.4em;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
 .note-content-formatted h3 {
     margin: 1.5em 0 0.75em 0;
-    color: #1e293b;
+    color: #4b5563;
+    font-size: 1.2em;
+    font-weight: 500;
     line-height: 1.3;
 }
 

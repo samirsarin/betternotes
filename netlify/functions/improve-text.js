@@ -76,40 +76,60 @@ exports.handler = async (event, context) => {
         }
 
         // Create the prompt for Gemini
-        const prompt = `Improve this student note by making it clearer, fixing errors, and organizing it better. Use proper spacing, newlines, and indentation to make it easy to read.
+        const prompt = `Transform this into comprehensive, college-level study notes with strict markdown formatting.
 
-CRITICAL FORMATTING RULES:
-- Put titles on their own lines
-- Add blank lines between sections
-- Include bullet points whenever possible
-- Use proper indentation for bullet points
-- Include newlines after each bullet point
-- Group related information with proper spacing
-- Make text bold and italic and underlined when appropriate to make it more readable
+MANDATORY STRUCTURE:
+1. # Main Topic (H1 - only one per note)
+2. ## Major Sections (H2 for main concepts)  
+3. ### Subsections (H3 for details)
+4. - Bullet points under each section
+5. **Bold** for key terms and definitions
+6. _Italic_ for emphasis and processes
 
-IMPROVEMENT RULES:
-- Add more information if text includes text similar to "missing information"
-- Always try to add more information on areas lacking
-- Finish unfinished sentences
+CONTENT REQUIREMENTS:
+- Expand all abbreviations with full terms
+- Add detailed explanations for every concept
+- Include functions, processes, and significance
+- Add context and relationships between ideas
+- Make it comprehensive enough for exam study
 
-Example input: "cpu central processing unit components alu performs math pc program counter holds address"
+FORMATTING REQUIREMENTS:
+- Use proper markdown syntax exactly
+- One blank line between all sections
+- Indent bullets properly under headings
+- Bold all key scientific/technical terms
+- Use italics for processes and methods
 
-Example output:
-CPU (Central Processing Unit) Components
+Example transformation:
+Input: "nucleus controls cell dna genetic material"
 
-ALU (Arithmetic Logic Unit)
-    • Performs mathematical and logical operations
-    • Essential for calculations and comparisons
+Output:
+# Cell Nucleus
 
-PC (Program Counter)
-    • Holds the address of the next instruction
-    • Different from a personal computer
+## Overview
+- The **nucleus** is the _control center_ of eukaryotic cells
+- Contains **deoxyribonucleic acid (DNA)** - the cell's genetic blueprint
+- Separated from cytoplasm by the **nuclear envelope**
 
-IMPORTANT: Use actual newlines (\\n) and spaces for indentation. Make sure there are blank lines between sections.
+## Primary Functions
+### Genetic Control
+- **Gene expression regulation**: Controls which genes are active
+- **DNA replication**: Coordinates copying during cell division
+- **Transcription**: Site where DNA is transcribed to RNA
 
-Original text: "${text}"
+### Structural Components  
+- **Nuclear envelope**: Double membrane with nuclear pores
+- **Nucleolus**: Dense region for ribosome assembly
+- **Chromatin**: DNA-protein complex that forms chromosomes
 
-Improved version:`;
+## Significance
+- Essential for _cellular reproduction_ and _protein synthesis_
+- Damage to nucleus can lead to cell death or cancer
+
+Transform this text with the same level of detail:
+"${text}"
+
+Return only the formatted study notes:`;
 
         console.log('Making request to Gemini API...');
 

@@ -69,20 +69,16 @@ class NotesApp {
         // AI improvement on double Enter
         this.noteContent.addEventListener('keydown', (e) => this.handleKeyDown(e));
         
-        // Add toggle functionality for formatted view
-        this.noteContent.addEventListener('focus', () => this.showPlainTextView());
-        this.noteContent.addEventListener('blur', () => {
-            // Small delay to allow for clicking within the editor
-            setTimeout(() => this.maybeShowFormattedView(), 100);
-        });
-        
-        // Click on formatted view to start editing
-        this.noteContentFormatted.addEventListener('click', () => {
-            // Convert the current formatted content back to clean text for editing
-            this.convertFormattedToPlainText();
-            this.showPlainTextView();
-            this.noteContent.focus();
-        });
+                 // Keep consistent formatting - no view switching
+         this.noteContent.addEventListener('blur', () => {
+             // Always show formatted view for consistency
+             setTimeout(() => this.showFormattedView(), 100);
+         });
+         
+         // Click on formatted view shows plaintext for editing
+         this.noteContentFormatted.addEventListener('click', () => {
+             this.noteContent.focus();
+         });
     }
 
     async loadNotes() {
@@ -391,9 +387,14 @@ class NotesApp {
                 // Convert the improved text to HTML and display it
                 this.renderFormattedContent();
                 
-                // Force show the formatted view after AI improvement
-                console.log('Forcing formatted view display after AI improvement');
+                // Force show the formatted view after AI improvement with academic styling
+                console.log('Showing formatted academic notes after AI improvement');
                 this.showFormattedView();
+                
+                // Ensure consistent academic formatting
+                setTimeout(() => {
+                    this.showFormattedView();
+                }, 100);
                 
                 // Position cursor after improved text
                 const newCursorPos = beforeImprovement.length + improvedText.length + 2;
@@ -440,9 +441,9 @@ class NotesApp {
                 this.noteContentFormatted = document.getElementById('noteContentFormatted');
             }
             
-            // Always convert to HTML for proper formatting
-            console.log('Converting to HTML with markdown support');
-            this.renderAsHTML(content);
+                         // Use markdown renderer for consistent college-level formatting
+             console.log('Rendering with MarkdownRenderer for academic formatting');
+             this.markdownRenderer.renderMarkdown(content, this.noteContentFormatted);
             
             console.log('Raw content being rendered:', JSON.stringify(content));
             console.log('Content character codes:', Array.from(content).map(c => c.charCodeAt(0)));
@@ -597,12 +598,10 @@ class NotesApp {
         this.noteContentFormatted.style.display = 'block';
     }
 
-    maybeShowFormattedView() {
-        // Only show formatted view if not actively editing
-        if (document.activeElement !== this.noteContent) {
-            this.showFormattedView();
-        }
-    }
+         maybeShowFormattedView() {
+         // Always show formatted view for consistency
+         this.showFormattedView();
+     }
 
  
 }
