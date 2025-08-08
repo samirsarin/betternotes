@@ -76,30 +76,40 @@ exports.handler = async (event, context) => {
         }
 
         // Create the prompt for Gemini
-        const prompt = `Improve this student note by making it clearer, fixing errors, adding any relevant information and organizing it better.
+        const prompt = `Take this student note and organize it into a clear, structured format. 
 
-CRITICAL: Your response must have proper line breaks and spacing. Use this EXACT format:
+FORMAT REQUIREMENTS:
+- Start each major topic on a new line
+- Put a blank line before each new section
+- Use • for bullet points
+- Put each bullet point on its own line
 
-Title
+EXAMPLE:
+Input: "cpu processes data alu does math pc holds addresses"
+Output: "The Central Processing Unit (CPU), or the brain of the computer, is responsible for executing instructions. It relies on several key components working in unison.
 
-Subtitle
-    • First bullet point
-    • Second bullet point
+Arithmetic Logic Unit (ALU): The calculator of the CPU. It performs all mathematical calculations (addition, subtraction) and logical operations (AND, OR, NOT).
 
-Another Subtitle  
-    • More bullet points
-    • With proper spacing
+Program Counter (PC): A pointer that holds the memory address of the next instruction to be executed. It ensures the CPU knows what to do next.
 
-RULES:
-1. Put TWO line breaks after titles
-2. Put TWO line breaks between sections
-3. Use 4 spaces before bullet points
-4. Put ONE line break after each bullet point
-5. Use • symbol for bullets
+Memory Address Register (MAR): Holds the memory address of the data or instruction that is about to be fetched from or written to memory. It's like the address you write on an envelope.
+
+Memory Data Register (MDR): A two-way register that holds data fetched from memory (on its way to the CPU) or data waiting to be stored in memory. It's like the letter inside the envelope.
+
+Control Unit (CU): The traffic cop of the CPU. It directs the flow of data between the CPU and other devices and interprets instructions to tell the other components, like the ALU, what to do.
+
+The Instruction Cycle 
+The CPU executes programs by continuously cycling through three fundamental steps. This is known as the Fetch-Decode-Execute cycle.
+
+Fetch: The Control Unit gets the instruction from the memory address currently stored in the Program Counter (PC). This instruction is then placed into the Memory Data Register (MDR).
+
+Decode: The Control Unit interprets the instruction it just fetched. It figures out what operation needs to be performed and what data is needed.
+
+Execute: The Control Unit sends signals to the relevant CPU components to carry out the instruction. This might involve the ALU performing a calculation or data being moved between registers. Once complete, the cycle begins again with the next instruction.
 
 Original text: "${text}"
 
-Your improved version (follow the format exactly):`;
+Improved and formatted version:`;
 
         console.log('Making request to Gemini API...');
 
@@ -281,46 +291,62 @@ function forceProperFormatting(text) {
     
     let formatted = text;
     
-    // Split into lines and process
+    // The AI often returns everything as one line with bullet symbols
+    // Let's detect structure and force line breaks
+    
+    // First, try to detect bullet points and insert line breaks
+    formatted = formatted
+        // Add line breaks before bullet points
+        .replace(/([.!?])\s*•/g, '$1\n\n    •')
+        .replace(/([a-z])\s*•/g, '$1\n    •')
+        
+        // Add line breaks before capital letters that start new concepts
+        .replace(/([.!?])\s*([A-Z][a-z]+)/g, '$1\n\n$2')
+        
+        // Handle specific patterns like "ALU", "CPU", "PC" etc.
+        .replace(/([.!?])\s*(ALU|CPU|PC|GPU|RAM|ROM)\s*\(/g, '$1\n\n$2 (')
+        .replace(/([a-z])\s*(ALU|CPU|PC|GPU|RAM|ROM)\s*\(/g, '$1\n\n$2 (')
+        
+        // Fix bullet point formatting
+        .replace(/•\s*/g, '• ')
+        .replace(/^\s*•/gm, '    •');
+    
+    // Split into lines and clean up
     let lines = formatted.split('\n');
     let result = [];
     
     for (let i = 0; i < lines.length; i++) {
-        let line = lines[i].trim();
+        let line = lines[i];
         
-        if (!line) {
-            // Keep empty lines for spacing
-            result.push('');
-            continue;
-        }
-        
-        // Check if this looks like a title (no bullet, substantial text)
-        if (!line.startsWith('•') && !line.startsWith('-') && !line.startsWith('    ') && line.length > 3) {
-            // Add spacing before titles (except first line)
+        // Skip completely empty lines but preserve single empty lines for spacing
+        if (line.trim() === '') {
             if (result.length > 0 && result[result.length - 1] !== '') {
                 result.push('');
             }
-            result.push(line);
-            result.push(''); // Add spacing after titles
+            continue;
         }
-        // Check if this looks like a bullet point
-        else if (line.startsWith('•') || line.startsWith('-')) {
-            // Ensure proper indentation for bullets
-            let bulletText = line.replace(/^[•\-]\s*/, '');
+        
+        // Ensure bullet points are properly indented
+        if (line.trim().startsWith('•')) {
+            let bulletText = line.trim().replace(/^•\s*/, '');
             result.push('    • ' + bulletText);
         }
-        // Check if this is already indented content
-        else if (line.startsWith('    ')) {
-            result.push(line);
+        // Handle titles (lines with no bullets and substantial content)
+        else if (!line.startsWith('    ') && line.trim().length > 5) {
+            // Add spacing before major sections
+            if (result.length > 0 && !result[result.length - 1].startsWith('    ') && result[result.length - 1] !== '') {
+                result.push('');
+            }
+            result.push(line.trim());
         }
-        // Regular text
+        // Regular content
         else {
-            result.push(line);
+            result.push(line.trim());
         }
     }
     
-    // Join back and clean up excessive spacing
-    formatted = result.join('\n').replace(/\n{4,}/g, '\n\n\n');
+    // Join back with proper spacing
+    formatted = result.join('\n').replace(/\n{3,}/g, '\n\n');
     
     console.log('After forcing format:', JSON.stringify(formatted));
     return formatted;

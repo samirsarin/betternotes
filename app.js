@@ -436,10 +436,17 @@ class NotesApp {
                 this.noteContentFormatted = document.getElementById('noteContentFormatted');
             }
             
-            // With white-space: pre-wrap CSS, we can just use the text directly
-            // The CSS will preserve all the AI's formatting, newlines, and indentation
+            // Try using textContent first (preserves exact formatting)
             this.noteContentFormatted.textContent = content;
-            console.log('Rendered content with preserved formatting');
+            
+            // If the content doesn't have proper line breaks, convert to HTML
+            if (!content.includes('\n') || content.split('\n').length < 3) {
+                console.log('Content lacks proper line breaks, converting to HTML');
+                this.renderAsHTML(content);
+            } else {
+                console.log('Using textContent with preserved formatting');
+            }
+            
             console.log('Raw content being rendered:', JSON.stringify(content));
             console.log('Content character codes:', Array.from(content).map(c => c.charCodeAt(0)));
             
@@ -449,8 +456,35 @@ class NotesApp {
             }
         }
     }
-    
 
+    renderAsHTML(content) {
+        // Convert content to HTML with forced line breaks
+        let html = content
+            // Convert bullet points to HTML lists
+            .replace(/^\s*•\s*(.+)$/gm, '<li>$1</li>')
+            
+            // Wrap consecutive list items in ul tags
+            .replace(/(<li>.*<\/li>\s*)+/g, (match) => {
+                return '<ul>' + match + '</ul>';
+            })
+            
+            // Convert double line breaks to paragraphs
+            .replace(/\n\n+/g, '</p><p>')
+            
+            // Convert single line breaks to <br>
+            .replace(/\n/g, '<br>')
+            
+            // Wrap in paragraph tags
+            .replace(/^(.+)/, '<p>$1')
+            .replace(/(.+)$/, '$1</p>')
+            
+            // Clean up
+            .replace(/<p><\/p>/g, '')
+            .replace(/<p>\s*<br>\s*<\/p>/g, '');
+            
+        this.noteContentFormatted.innerHTML = html;
+        console.log('Rendered as HTML:', html);
+    }
 
     renderWithShowdownFallback(content) {
         try {
