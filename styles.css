@@ -239,6 +239,9 @@ body {
     background: transparent;
     overflow-y: auto;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    
+    /* Preserve AI-generated whitespace and newlines */
+    white-space: pre-wrap;
 }
 
 .note-content-formatted h1,

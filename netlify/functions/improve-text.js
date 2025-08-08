@@ -76,28 +76,29 @@ exports.handler = async (event, context) => {
         }
 
         // Create the prompt for Gemini
-        const prompt = `Improve this student note by making it clearer, fixing errors, and organizing it better. Output clean, readable text that looks good in a note-taking app.
+        const prompt = `Improve this student note by making it clearer, fixing errors, and organizing it better. Use proper spacing, newlines, and indentation to make it easy to read.
 
-FORMATTING RULES:
-- Use clear titles for main topics
-- Create bullet points for lists
-- Use short, concise sentences
-- Group related information together
-- Make it easy to read and study from
-
-Do NOT use markdown symbols like # or **. Just output clean, well-formatted text with proper spacing.
+CRITICAL FORMATTING RULES:
+- Put titles on their own lines
+- Add blank lines between sections
+- Use proper indentation for bullet points
+- Include newlines after each bullet point
+- Group related information with proper spacing
 
 Example input: "cpu central processing unit components alu performs math pc program counter holds address"
-Example output: 
+
+Example output:
 CPU (Central Processing Unit) Components
 
 ALU (Arithmetic Logic Unit)
-• Performs mathematical and logical operations
-• Essential for calculations and comparisons
+    • Performs mathematical and logical operations
+    • Essential for calculations and comparisons
 
-PC (Program Counter)  
-• Holds the address of the next instruction
-• Different from a personal computer
+PC (Program Counter)
+    • Holds the address of the next instruction
+    • Different from a personal computer
+
+IMPORTANT: Use actual newlines (\\n) and spaces for indentation. Make sure there are blank lines between sections.
 
 Original text: "${text}"
 
@@ -233,12 +234,11 @@ Improved version:`;
             };
         }
 
-        // Clean up the response for plain text output
+        // Clean up the response while preserving formatting
         generatedText = generatedText
             .trim()
-            .replace(/\s+/g, ' ')           // Normalize spaces
-            .replace(/\n\s+/g, '\n')        // Remove leading spaces on new lines
-            .replace(/\n{3,}/g, '\n\n');    // Limit consecutive line breaks
+            .replace(/\n{4,}/g, '\n\n\n')   // Limit excessive line breaks but allow some spacing
+            .replace(/[ \t]+$/gm, '');      // Remove trailing spaces but preserve line structure
 
         return {
             statusCode: 200,

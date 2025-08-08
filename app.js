@@ -436,55 +436,19 @@ class NotesApp {
                 this.noteContentFormatted = document.getElementById('noteContentFormatted');
             }
             
-            // Since AI now outputs clean text, convert it to nice HTML formatting
-            this.renderCleanTextAsHTML(content);
+            // With white-space: pre-wrap CSS, we can just use the text directly
+            // The CSS will preserve all the AI's formatting, newlines, and indentation
+            this.noteContentFormatted.textContent = content;
+            console.log('Rendered content with preserved formatting');
             
         } else {
             if (this.noteContentFormatted) {
-                this.noteContentFormatted.innerHTML = '';
+                this.noteContentFormatted.textContent = '';
             }
         }
     }
     
-    renderCleanTextAsHTML(content) {
-        try {
-            // Convert clean text to nicely formatted HTML
-            let html = content
-                // Convert lines that look like titles (ALL CAPS or Title Case followed by colon/newline)
-                .replace(/^([A-Z][A-Za-z\s\(\)]+)$/gm, '<h3>$1</h3>')
-                .replace(/^([A-Z\s\(\)]+)$/gm, '<h3>$1</h3>')
-                
-                // Convert bullet points (• or -)
-                .replace(/^[•\-]\s*(.+)$/gm, '<li>$1</li>')
-                
-                // Wrap consecutive list items in ul tags
-                .replace(/(<li>.*<\/li>)(\s*<li>.*<\/li>)*/g, (match) => {
-                    return '<ul>' + match + '</ul>';
-                })
-                
-                // Convert double line breaks to paragraph breaks
-                .replace(/\n\n+/g, '</p><p>')
-                
-                // Convert single line breaks to <br>
-                .replace(/\n/g, '<br>')
-                
-                // Wrap in paragraph tags if not empty
-                .replace(/^(.+)/, '<p>$1')
-                .replace(/(.+)$/, '$1</p>')
-                
-                // Clean up empty paragraphs
-                .replace(/<p><\/p>/g, '')
-                .replace(/<p>\s*<br>\s*<\/p>/g, '');
-                
-            this.noteContentFormatted.innerHTML = html;
-            console.log('Rendered clean text as HTML:', html);
-            
-        } catch (error) {
-            console.error('Error rendering clean text:', error);
-            // Fallback: just use line breaks
-            this.noteContentFormatted.innerHTML = content.replace(/\n/g, '<br>');
-        }
-    }
+
 
     renderWithShowdownFallback(content) {
         try {
@@ -535,56 +499,12 @@ class NotesApp {
     }
 
     convertFormattedToPlainText() {
-        // Extract clean text from the current formatted content
-        if (this.noteContentFormatted && this.noteContentFormatted.innerHTML.trim()) {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = this.noteContentFormatted.innerHTML;
-            
-            // Convert HTML back to clean, readable text
-            let cleanText = '';
-            const walker = document.createTreeWalker(
-                tempDiv,
-                NodeFilter.SHOW_ALL,
-                null,
-                false
-            );
-            
-            let node;
-            while (node = walker.nextNode()) {
-                if (node.nodeType === Node.TEXT_NODE) {
-                    cleanText += node.textContent;
-                } else if (node.nodeType === Node.ELEMENT_NODE) {
-                    const tagName = node.tagName.toLowerCase();
-                    
-                    // Add proper spacing and formatting for different elements
-                    if (tagName === 'h1' || tagName === 'h2' || tagName === 'h3') {
-                        if (cleanText && !cleanText.endsWith('\n\n')) {
-                            cleanText += '\n\n';
-                        }
-                    } else if (tagName === 'p') {
-                        if (cleanText && !cleanText.endsWith('\n')) {
-                            cleanText += '\n';
-                        }
-                    } else if (tagName === 'li') {
-                        if (cleanText && !cleanText.endsWith('\n')) {
-                            cleanText += '\n';
-                        }
-                        cleanText += '• ';
-                    } else if (tagName === 'br') {
-                        cleanText += '\n';
-                    }
-                }
-            }
-            
-            // Clean up the text and update the textarea
-            cleanText = cleanText
-                .replace(/\n{3,}/g, '\n\n')  // Remove excessive line breaks
-                .replace(/^\s+|\s+$/g, '')   // Trim whitespace
-                .replace(/\s+/g, ' ')        // Normalize spaces
-                .replace(/\n\s+/g, '\n');    // Remove leading spaces on new lines
-            
-            this.noteContent.value = cleanText;
-            console.log('Converted formatted content to clean text:', cleanText);
+        // Since we're now using textContent instead of innerHTML, 
+        // and the formatting is preserved with CSS, we can just copy the text directly
+        if (this.noteContentFormatted && this.noteContentFormatted.textContent.trim()) {
+            // The textContent already contains the properly formatted text with newlines and indentation
+            this.noteContent.value = this.noteContentFormatted.textContent;
+            console.log('Converted formatted content to editable text:', this.noteContentFormatted.textContent);
         }
     }
 
