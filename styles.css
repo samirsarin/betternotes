@@ -225,6 +225,12 @@ body {
     background: transparent;
     padding: 1rem 0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    display: none; /* Hidden by default, shown when editing */
+}
+
+.note-content:focus {
+    display: block;
+    outline: none;
 }
 
 .note-content-formatted {

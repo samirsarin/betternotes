@@ -69,16 +69,19 @@ class NotesApp {
         // AI improvement on double Enter
         this.noteContent.addEventListener('keydown', (e) => this.handleKeyDown(e));
         
-                 // Keep consistent formatting - no view switching
+                 // Keep consistent formatting - show formatted view when not editing
+         this.noteContent.addEventListener('focus', () => this.showPlainTextView());
          this.noteContent.addEventListener('blur', () => {
              // Always show formatted view for consistency
              setTimeout(() => this.showFormattedView(), 100);
          });
          
-         // Click on formatted view shows plaintext for editing
-         this.noteContentFormatted.addEventListener('click', () => {
-             this.noteContent.focus();
-         });
+                   // Click on formatted view shows plaintext for editing
+          this.noteContentFormatted.addEventListener('click', () => {
+              this.convertFormattedToPlainText();
+              this.showPlainTextView();
+              this.noteContent.focus();
+          });
     }
 
     async loadNotes() {
@@ -216,8 +219,9 @@ class NotesApp {
         this.noteTitle.value = note.title;
         this.noteContent.value = note.content;
         
-        // Render formatted content
+        // Render formatted content and show formatted view
         this.renderFormattedContent();
+        this.showFormattedView();
         
         this.showEditor();
         this.updateActiveNote();
@@ -589,6 +593,11 @@ class NotesApp {
 
     showPlainTextView() {
         this.noteContent.style.display = 'block';
+        this.noteContent.style.position = 'absolute';
+        this.noteContent.style.top = '0';
+        this.noteContent.style.left = '0';
+        this.noteContent.style.right = '0';
+        this.noteContent.style.bottom = '0';
         this.noteContentFormatted.style.display = 'none';
     }
 
