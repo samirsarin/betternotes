@@ -26,7 +26,7 @@ class MarkdownRenderer {
             // Configure marked with security-focused options
             marked.setOptions({
                 gfm: true,              // Enable GitHub Flavored Markdown
-                breaks: true,           // Convert line breaks to <br>
+                breaks: false,           // Convert line breaks to <br>
                 headerIds: false,       // Disable header IDs for security
                 mangle: false,          // Don't mangle email addresses
                 sanitize: false,        // We'll use DOMPurify for sanitization
